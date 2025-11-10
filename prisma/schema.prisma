@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// AUTENTICAÇÃO
+
+// O Dono do Restaurante (Usuário)
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String   @map("password_hash")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Um dono pode ter vários restaurantes
+  restaurants Restaurant[]
+
+  @@map("users")
+}
+
+// Loja
+model Restaurant {
+  id                 String   @id @default(uuid())
+  name               String
+  slug               String   @unique // O nome na URL
+  logoUrl            String?  @map("logo_url")
+  addressText        String   @map("address_text")
+  phoneNumber        String   @map("phone_number")
+  pixKey             String   @map("pix_key")
+  isOpen             Boolean  @default(false) @map("is_open")
+  // Configs de Entrega
+  deliveryFee        Decimal  @default(0.00) @db.Decimal(10, 2) @map("delivery_fee")
+  freeDeliveryAbove  Decimal? @db.Decimal(10, 2) @map("free_delivery_above")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // qual dono esse restaurante pertence
+  userId             String   @map("user_id")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // O que este restaurante possui
+  categories         Category[]
+  orders             Order[]
+
+  @@map("restaurants")
+}
+
+// Categorias do Cardápio (ex: "Lanches", "Bebidas")
+model Category {
+  id             String   @id @default(uuid())
+  name           String
+  orderIndex     Int      @default(0) // Para ordenar
+  
+  // qual restaurante esta categoria pertence
+  restaurantId   String   @map("restaurant_id")
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  // O que esta categoria possui
+  products       Product[]
+
+  @@map("categories")
+}
+
+// Produto do Cardápio
+model Product {
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  basePrice      Decimal   @map("base_price") @db.Decimal(10, 2) // Preço base do produto
+  imageUrl       String?   @map("image_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relação: A qual categoria este produto pertence
+  categoryId     String    @map("category_id")
+  category       Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // Relações: O que este produto POSSUI
+  optionGroups   OptionGroup[]
+  orderItems     OrderItem[] // Em quais pedidos este produto já apareceu
+
+  @@map("products")
+}
+
+// Grupo de Opcionais (ex: "Adicionais do Lanche", "Tamanho da Pizza")
+model OptionGroup {
+  id             String   @id @default(uuid())
+  name           String   // Ex: "Escolha sua borda"
+  type           OptionGroupType @default(MULTIPLE) // É seleção única (Radio) ou múltipla (Checkbox)?
+  minSelection   Int      @default(0) // Mínimo de itens que o cliente deve marcar
+  maxSelection   Int      @default(1) // Máximo de itens (1 = seleção única)
+
+  // Relação: A qual produto este grupo pertence
+  productId      String   @map("product_id")
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Relação: O que este grupo POSSUI
+  options        Option[]
+
+  @@map("option_groups")
+}
+
+// Item Opcional (ex: "Bacon", "Borda de Catupiry")
+model Option {
+  id             String   @id @default(uuid())
+  name           String 
+  priceDelta     Decimal  @default(0.00) @db.Decimal(10, 2) @map("price_delta") // O valor a ADICIONAR ao preço base
+
+  // Relação: A qual grupo este opcional pertence
+  groupId        String   @map("group_id")
+  group          OptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("options")
+}
+
+// O Pedido (A "compra" do cliente)
+model Order {
+  id               String      @id @default(uuid())
+  customerName     String      @map("customer_name")
+  customerPhone    String      @map("customer_phone")
+  customerAddress  String      @map("customer_address")
+  
+  // Pagamento
+  paymentMethod    String      @map("payment_method") 
+  trocoPara        Decimal?    @map("troco_para") @db.Decimal(10, 2) 
+  
+  // Valores
+  subTotalPrice    Decimal     @map("sub_total_price") @db.Decimal(10, 2) // Preço dos itens
+  deliveryFee      Decimal     @map("delivery_fee") @db.Decimal(10, 2)
+  totalPrice       Decimal     @map("total_price") @db.Decimal(10, 2)
+  
+  // Status
+  status           OrderStatus @default(PENDING)
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  // Relação: De qual restaurante é este pedido
+  restaurantId     String      @map("restaurant_id")
+  restaurant       Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  // Relação: O que este pedido CONTÉM
+  orderItems       OrderItem[]
+
+  @@map("orders")
+}
+
+// Item dentro do Pedido (ex: 1x "X-Burger Duplo c/ Bacon")
+model OrderItem {
+  id                 String   @id @default(uuid())
+  quantity           Int      @default(1)
+  unitPrice          Decimal  @map("unit_price") @db.Decimal(10, 2) // Preço (Base + Opcionais) no momento da compra
+  optionsDescription String?  @map("options_description") // Texto (ex: "+Bacon, +Cheddar, Sem Cebola")
+
+  // Relação: A qual pedido este item pertence
+  orderId            String   @map("order_id")
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Relação: Qual produto original foi comprado
+  productId          String   @map("product_id")
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Restrict) // Restrict: Não deixar deletar um produto que já foi vendido
+
+  @@map("order_items")
+}
+
+// ENUMS 
+
+
+enum OptionGroupType {
+  SINGLE   // Seleção Única (Radio button)
+  MULTIPLE // Seleção Múltipla (Checkbox)
+}
+
+enum OrderStatus {
+  PENDING   // Pendente (Cliente acabou de fazer, esperando o dono aceitar)
+  PREPARING // Em Preparo (Dono aceitou)
+  OUT       // Saiu para Entrega (Dono despachou)
+  COMPLETED // Concluído (Cliente recebeu)
+  REJECTED  // Rejeitado (Dono cancelou)
+}
