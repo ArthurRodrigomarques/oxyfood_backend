@@ -1,44 +1,33 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
+    /* --- Configuração Base do Módulo --- */
+    "target": "ES2022", // Compila para a versão moderna do JavaScript
+    "module": "NodeNext", // Usa o sistema de módulos ESM do Node
+    "moduleResolution": "NodeNext", // Como o Node (ESM) resolve os módulos
+    "typeRoots": ["./node_modules/@types"], // Onde procurar os tipos
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    /* --- Diretórios do Projeto --- */
+    "rootDir": "src", // Onde está seu código TypeScript
+    "outDir": "dist", // Onde o JavaScript compilado (produção) vai ficar
+    "baseUrl": "./src", // Base para os "atalhos" de importação
 
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+    /* --- Atalhos de Importação (Path Aliases) --- */
+    "paths": {
+      "@/lib/*": ["lib/*"],
+      "@/http/*": ["http/*"],
+      "@/schemas/*": ["schemas/*"],
+      "@/use-cases/*": ["use-cases/*"]
+    },
 
-    // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    /* --- Configuração de Interoperabilidade --- */
+    "esModuleInterop": true, // Permite importar módulos CommonJS antigos
+    "allowSyntheticDefaultImports": true, // Permite "import React from 'react'"
+    "forceConsistentCasingInFileNames": true, // Evita bugs entre Windows e Linux
 
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    /* --- Configuração de Rigor (Strictness) --- */
+    "strict": true, // Liga TODAS as checagens de tipo (essencial!)
+    "skipLibCheck": true // Não checar os tipos das bibliotecas (node_modules)
+  },
+  "include": ["src"], // Quais pastas o TypeScript deve "olhar"
+  "exclude": ["node_modules", "dist"] // Quais pastas ele deve ignorar
 }
