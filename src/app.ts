@@ -3,6 +3,7 @@ import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
 import { restaurantRoutes } from "./http/routes/restaurant.routes.js";
 import { categoryRoutes } from "./http/routes/category.routes.js";
+import { productRoutes } from "./http/routes/product.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -26,3 +27,5 @@ app.register(userRoutes);
 app.register(restaurantRoutes);
 // criar nova categoria de produto
 app.register(categoryRoutes);
+// registrar novos produtos
+app.register(productRoutes);
