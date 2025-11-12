@@ -5,6 +5,7 @@ import { restaurantRoutes } from "./http/routes/restaurant.routes.js";
 import { categoryRoutes } from "./http/routes/category.routes.js";
 import { productRoutes } from "./http/routes/product.routes.js";
 import { optionGroupRoutes } from "./http/routes/option-group.routes.js";
+import { optionRoutes } from "./http/routes/option.route.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -32,3 +33,5 @@ app.register(categoryRoutes);
 app.register(productRoutes);
 // opções do produto
 app.register(optionGroupRoutes);
+// Opção
+app.register(optionRoutes);
