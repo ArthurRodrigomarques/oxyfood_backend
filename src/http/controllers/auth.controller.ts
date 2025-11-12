@@ -3,8 +3,8 @@ import {
   registerUserBodySchema,
   loginUserBodySchema,
 } from "@/schemas/auth.schema.js";
-import { RegisterUserUseCase } from "@/use-cases/register-user.use-case.js";
-import { LoginUserUseCase } from "@/use-cases/login-user.use-case.js";
+import { RegisterUserUseCase } from "@/use-cases/auth/register-user.use-case.js";
+import { LoginUserUseCase } from "@/use-cases/auth/login-user.use-case.js";
 import { hash } from "bcrypt";
 import jwt from "jsonwebtoken";
 

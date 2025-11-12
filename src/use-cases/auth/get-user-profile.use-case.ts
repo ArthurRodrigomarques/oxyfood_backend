@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma.js";
 import { User } from "@prisma/client"; // Lembre-se: npx prisma generate se isto der erro
 
-// O que este Use Case espera (o ID do usuário)
+// ID do usuário
 interface GetUserProfileRequest {
   userId: string;
 }
 
-// O que ele devolve (o usuário, sem a senha)
+// o usuário, sem a senha
 interface GetUserProfileResponse {
   user: {
     id: string;

@@ -1,23 +1,22 @@
 import fastify from "fastify";
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
+import { restaurantRoutes } from "./http/routes/restaurant.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
-    userId: string;
+    userId: string | null;
   }
 }
 
 export const app = fastify();
 
-app.decorateRequest("userId", "");
+app.decorateRequest("userId", null);
 
 app.get("/", () => {
   return { message: "Oxyfood API Rodando" };
 });
 
-// rotas de autenticação (públicas)
 app.register(authRoutes);
-
-// rotas de usuário (protegidas)
 app.register(userRoutes);
+app.register(restaurantRoutes);

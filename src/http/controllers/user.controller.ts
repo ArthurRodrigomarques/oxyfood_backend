@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { GetUserProfileUseCase } from "@/use-cases/get-user-profile.use-case.js";
+import { GetUserProfileUseCase } from "@/use-cases/auth/get-user-profile.use-case.js";
 
 export class UserController {
   async getProfile(request: FastifyRequest, reply: FastifyReply) {
