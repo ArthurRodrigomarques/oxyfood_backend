@@ -2,6 +2,7 @@ import fastify from "fastify";
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
 import { restaurantRoutes } from "./http/routes/restaurant.routes.js";
+import { categoryRoutes } from "./http/routes/category.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -17,6 +18,11 @@ app.get("/", () => {
   return { message: "Oxyfood API Rodando" };
 });
 
+//autenticação
 app.register(authRoutes);
+// login
 app.register(userRoutes);
+// criar restaurante
 app.register(restaurantRoutes);
+// criar nova categoria de produto
+app.register(categoryRoutes);
