@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { OrderController } from "../controllers/order.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js"; // 1. IMPORTAR O PORTEIRO
+import { authMiddleware } from "../middlewares/auth.middleware.js"; // O "PORTEIRO"
 
 const orderController = new OrderController();
 
@@ -11,5 +11,11 @@ export async function orderRoutes(app: FastifyInstance) {
     "/restaurants/:restaurantId/orders",
     { onRequest: [authMiddleware] },
     orderController.listByRestaurant
+  );
+
+  app.patch(
+    "/orders/:orderId/status",
+    { onRequest: [authMiddleware] },
+    orderController.updateStatus
   );
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OrderStatus } from "@prisma/client";
 
 const OrderItemSchema = z.object({
   productId: z.string().uuid({ message: "ID de produto inválido." }),
@@ -9,7 +10,6 @@ const OrderItemSchema = z.object({
   options: z.array(z.string().uuid()).optional(),
 });
 
-// Criar Pedido
 export const createOrderBodySchema = z.object({
   customerName: z.string().min(3, { message: "O nome é obrigatório." }),
   customerPhone: z.string().min(9, { message: "Telefone inválido." }),
@@ -29,4 +29,15 @@ export const createOrderParamsSchema = z.object({
 
 export const getOrdersParamsSchema = z.object({
   restaurantId: z.string().uuid({ message: "ID do restaurante inválido." }),
+});
+
+export const updateOrderStatusParamsSchema = z.object({
+  orderId: z.string().uuid({ message: "ID do pedido inválido." }),
+});
+
+export const updateOrderStatusBodySchema = z.object({
+  status: z.nativeEnum(OrderStatus, {
+    message:
+      "Status inválido. Deve ser 'PENDING', 'PREPARING', 'OUT', 'COMPLETED', or 'REJECTED'.",
+  }),
 });
