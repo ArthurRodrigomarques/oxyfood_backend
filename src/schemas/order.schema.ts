@@ -1,7 +1,7 @@
-import z from "zod";
+import { z } from "zod";
 
 const OrderItemSchema = z.object({
-  productId: z.string().uuid({ message: "ID de Produto inválido." }),
+  productId: z.string().uuid({ message: "ID de produto inválido." }),
   quantity: z
     .number()
     .int({ message: "A quantidade deve ser um número inteiro." })
@@ -9,6 +9,7 @@ const OrderItemSchema = z.object({
   options: z.array(z.string().uuid()).optional(),
 });
 
+// Criar Pedido
 export const createOrderBodySchema = z.object({
   customerName: z.string().min(3, { message: "O nome é obrigatório." }),
   customerPhone: z.string().min(9, { message: "Telefone inválido." }),
@@ -23,5 +24,9 @@ export const createOrderBodySchema = z.object({
 });
 
 export const createOrderParamsSchema = z.object({
+  restaurantId: z.string().uuid({ message: "ID do restaurante inválido." }),
+});
+
+export const getOrdersParamsSchema = z.object({
   restaurantId: z.string().uuid({ message: "ID do restaurante inválido." }),
 });
