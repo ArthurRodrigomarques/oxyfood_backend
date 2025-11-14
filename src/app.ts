@@ -1,4 +1,6 @@
 import fastify from "fastify";
+import cors from "@fastify/cors";
+
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
 import { restaurantRoutes } from "./http/routes/restaurant.routes.js";
@@ -16,8 +18,13 @@ declare module "fastify" {
 
 export const app = fastify();
 
+app.register(cors, {
+  origin: "*",
+});
+
 app.decorateRequest("userId", null);
 
+// Rota de hello world
 app.get("/", () => {
   return { message: "Oxyfood API Rodando" };
 });

@@ -19,3 +19,13 @@ export const createRestaurantBodySchema = z.object({
 export const getPublicRestaurantParamsSchema = z.object({
   slug: z.string().min(1, { message: "O slug do restaurante é obrigatório." }),
 });
+
+export const toggleRestaurantStatusParamsSchema = z.object({
+  restaurantId: z.string().uuid({ message: "ID do restaurante inválido." }),
+});
+
+export const toggleRestaurantStatusBodySchema = z.object({
+  isOpen: z.boolean({
+    error: "O status 'isOpen' (true/false) é obrigatório.",
+  }),
+});

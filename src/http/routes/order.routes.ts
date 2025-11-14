@@ -18,4 +18,6 @@ export async function orderRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     orderController.updateStatus
   );
+
+  app.get("/orders/:orderId/status", orderController.getStatus);
 }

@@ -12,4 +12,10 @@ export async function restaurantRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     restaurantController.create
   );
+
+  app.patch(
+    "/restaurants/:restaurantId/toggle-status",
+    { onRequest: [authMiddleware] },
+    restaurantController.toggleStatus
+  );
 }

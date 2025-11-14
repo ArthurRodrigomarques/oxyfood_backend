@@ -41,3 +41,7 @@ export const updateOrderStatusBodySchema = z.object({
       "Status inválido. Deve ser 'PENDING', 'PREPARING', 'OUT', 'COMPLETED', or 'REJECTED'.",
   }),
 });
+
+export const getOrderStatusParamsSchema = z.object({
+  orderId: z.string().uuid({ message: "ID do pedido inválido." }),
+});
