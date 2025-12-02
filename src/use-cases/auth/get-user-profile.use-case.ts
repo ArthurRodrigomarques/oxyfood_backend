@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
-import { User } from "@prisma/client"; // Lembre-se: npx prisma generate se isto der erro
+import { User } from "@prisma/client";
 
 // ID do usuário
 interface GetUserProfileRequest {

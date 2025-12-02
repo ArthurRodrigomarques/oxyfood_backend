@@ -33,9 +33,12 @@ export class ListRestaurantOrdersUseCase {
       where: {
         restaurantId: restaurantId,
       },
-
       include: {
-        orderItems: true,
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
