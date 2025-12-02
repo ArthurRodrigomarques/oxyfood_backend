@@ -1,18 +1,19 @@
 import { prisma } from "@/lib/prisma.js";
-import { User } from "@prisma/client";
 
-// ID do usuário
 interface GetUserProfileRequest {
   userId: string;
 }
-
-// o usuário, sem a senha
 interface GetUserProfileResponse {
   user: {
     id: string;
     name: string;
     email: string;
     createdAt: Date;
+    restaurants: {
+      id: string;
+      name: string;
+      slug: string;
+    }[];
   };
 }
 
@@ -23,6 +24,15 @@ export class GetUserProfileUseCase {
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
+      },
+      include: {
+        restaurants: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
       },
     });
 
@@ -36,6 +46,7 @@ export class GetUserProfileUseCase {
         name: user.name,
         email: user.email,
         createdAt: user.createdAt,
+        restaurants: user.restaurants,
       },
     };
   }
