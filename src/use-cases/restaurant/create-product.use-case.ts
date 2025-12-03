@@ -13,6 +13,8 @@ export class CreateProductUseCase {
     name,
     description,
     basePrice,
+    imageUrl,
+    available,
     categoryId,
     userId,
   }: CreateProductRequest): Promise<Product> {
@@ -38,6 +40,8 @@ export class CreateProductUseCase {
         name,
         description,
         basePrice,
+        imageUrl,
+        available: available ?? true,
         categoryId: categoryId,
       },
     });
