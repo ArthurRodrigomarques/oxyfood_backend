@@ -24,6 +24,9 @@ export class GetAdminMenuUseCase {
       orderBy: { orderIndex: "asc" },
       include: {
         products: {
+          where: {
+            deletedAt: null,
+          },
           orderBy: { createdAt: "desc" },
           include: {
             optionGroups: true,

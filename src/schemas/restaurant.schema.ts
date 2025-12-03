@@ -16,6 +16,20 @@ export const createRestaurantBodySchema = z.object({
   freeDeliveryAbove: z.number().positive().optional(),
 });
 
+export const updateRestaurantBodySchema = z.object({
+  name: z.string().min(3).optional(),
+  description: z.string().optional(),
+  addressText: z.string().min(10).optional(),
+  phoneNumber: z.string().min(9).optional(),
+  deliveryFee: z.number().nonnegative().optional(),
+  freeDeliveryAbove: z.number().positive().optional().or(z.null()),
+  pixKey: z.string().min(5).optional(),
+});
+
+export const updateRestaurantParamsSchema = z.object({
+  restaurantId: z.string().uuid(),
+});
+
 export const getPublicRestaurantParamsSchema = z.object({
   slug: z.string().min(1, { message: "O slug do restaurante é obrigatório." }),
 });

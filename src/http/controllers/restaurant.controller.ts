@@ -8,9 +8,12 @@ import {
   getPublicRestaurantParamsSchema,
   toggleRestaurantStatusBodySchema,
   toggleRestaurantStatusParamsSchema,
+  updateRestaurantBodySchema,
+  updateRestaurantParamsSchema,
 } from "@/schemas/restaurant.schema.js";
 
 import { z } from "zod";
+import { UpdateRestaurantUseCase } from "@/use-cases/restaurant/update-restaurant.use-case.js";
 
 export class RestaurantController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -47,6 +50,32 @@ export class RestaurantController {
       }
       console.error(error);
       return reply.status(500).send({ message: "Erro interno do servidor." });
+    }
+  }
+
+  async update(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.userId!;
+      const { restaurantId } = updateRestaurantParamsSchema.parse(
+        request.params
+      );
+      const body = updateRestaurantBodySchema.parse(request.body);
+
+      const updateRestaurant = new UpdateRestaurantUseCase();
+      const restaurant = await updateRestaurant.execute({
+        restaurantId,
+        userId,
+        ...body,
+      });
+
+      return reply.status(200).send({ restaurant });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: "Erro de validação", errors: error.format() });
+      }
+      return reply.status(400).send({ message: error.message });
     }
   }
 

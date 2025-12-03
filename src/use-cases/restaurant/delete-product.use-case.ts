@@ -26,8 +26,12 @@ export class DeleteProductUseCase {
       throw new Error("Não autorizado.");
     }
 
-    await prisma.product.delete({
+    await prisma.product.update({
       where: { id: productId },
+      data: {
+        deletedAt: new Date(),
+        available: false,
+      },
     });
   }
 }

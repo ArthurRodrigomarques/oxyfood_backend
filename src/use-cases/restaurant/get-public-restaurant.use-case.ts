@@ -18,6 +18,10 @@ export class GetPublicRestaurantUseCase {
           },
           include: {
             products: {
+              where: {
+                deletedAt: null,
+                available: true,
+              },
               include: {
                 optionGroups: {
                   include: {
