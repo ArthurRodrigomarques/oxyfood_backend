@@ -9,3 +9,7 @@ export const createCategoryBodySchema = z.object({
 export const createCategoryParamsSchema = z.object({
   restaurantId: z.string().uuid({ message: "ID do restaurante inválido" }),
 });
+
+export const deleteCategoryParamsSchema = z.object({
+  categoryId: z.string().uuid({ message: "ID da categoria inválido." }),
+});

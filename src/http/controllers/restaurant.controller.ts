@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { CreateRestaurantUseCase } from "@/use-cases/restaurant/create-restaurant.use-case.js";
 import { GetPublicRestaurantUseCase } from "@/use-cases/restaurant/get-public-restaurant.use-case.js";
 import { ToggleRestaurantStatusUseCase } from "@/use-cases/restaurant/toggle-restaurant-status.use-case.js";
+import { GetAdminMenuUseCase } from "@/use-cases/restaurant/get-admin-menu.use-case.js";
 import {
   createRestaurantBodySchema,
   getPublicRestaurantParamsSchema,
@@ -81,6 +82,31 @@ export class RestaurantController {
       }
       console.error(error);
       return reply.status(500).send({ message: "Erro interno do servidor." });
+    }
+  }
+
+  async getMenu(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.userId;
+      if (!userId) {
+        throw new Error("ID do usuário não encontrado.");
+      }
+
+      const paramsSchema = z.object({
+        restaurantId: z.string().uuid(),
+      });
+
+      const { restaurantId } = paramsSchema.parse(request.params);
+
+      const getMenu = new GetAdminMenuUseCase();
+      const menu = await getMenu.execute({ restaurantId, userId });
+
+      return reply.status(200).send(menu);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: "ID Inválido" });
+      }
+      return reply.status(400).send({ message: error.message });
     }
   }
 }
