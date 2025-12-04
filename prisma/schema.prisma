@@ -28,9 +28,10 @@ model User {
 model Restaurant {
   id                 String   @id @default(uuid())
   name               String
-  slug               String   @unique // O nome na 
+  slug               String   @unique
   description        String?
   logoUrl            String?  @map("logo_url")
+  bannerUrl          String?  @map("banner_url")
   addressText        String   @map("address_text")
   phoneNumber        String   @map("phone_number")
   pixKey             String   @map("pix_key")
