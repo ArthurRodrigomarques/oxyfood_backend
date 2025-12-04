@@ -14,6 +14,7 @@ import {
 
 import { z } from "zod";
 import { UpdateRestaurantUseCase } from "@/use-cases/restaurant/update-restaurant.use-case.js";
+import { GetRestaurantMetricsUseCase } from "@/use-cases/restaurant/get-restaurant-metrics.use-case.js";
 
 export class RestaurantController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -134,6 +135,29 @@ export class RestaurantController {
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ message: "ID Inválido" });
+      }
+      return reply.status(400).send({ message: error.message });
+    }
+  }
+
+  async getMetrics(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.userId;
+      if (!userId) throw new Error("Não autenticado.");
+
+      const paramsSchema = z.object({
+        restaurantId: z.string().uuid(),
+      });
+
+      const { restaurantId } = paramsSchema.parse(request.params);
+
+      const getMetrics = new GetRestaurantMetricsUseCase();
+      const metrics = await getMetrics.execute({ restaurantId, userId });
+
+      return reply.status(200).send(metrics);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: "Dados inválidos" });
       }
       return reply.status(400).send({ message: error.message });
     }

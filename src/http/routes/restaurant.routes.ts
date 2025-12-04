@@ -30,4 +30,10 @@ export async function restaurantRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     restaurantController.toggleStatus
   );
+
+  app.get(
+    "/restaurants/:restaurantId/metrics",
+    { onRequest: [authMiddleware] },
+    restaurantController.getMetrics
+  );
 }

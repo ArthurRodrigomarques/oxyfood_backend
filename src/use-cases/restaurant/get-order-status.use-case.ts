@@ -1,22 +1,27 @@
 import { prisma } from "@/lib/prisma.js";
-import { OrderStatus } from "@prisma/client";
 
 interface GetOrderStatusRequest {
   orderId: string;
 }
 
-interface GetOrderStatusResponse {
-  status: OrderStatus;
-  customerName: string;
-}
-
 export class GetOrderStatusUseCase {
-  async execute({
-    orderId,
-  }: GetOrderStatusRequest): Promise<GetOrderStatusResponse> {
+  async execute({ orderId }: GetOrderStatusRequest) {
     const order = await prisma.order.findUnique({
       where: {
         id: orderId,
+      },
+      include: {
+        restaurant: {
+          select: {
+            name: true,
+            phoneNumber: true,
+          },
+        },
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
       },
     });
 
@@ -24,9 +29,6 @@ export class GetOrderStatusUseCase {
       throw new Error("Pedido não encontrado.");
     }
 
-    return {
-      status: order.status,
-      customerName: order.customerName,
-    };
+    return order;
   }
 }
