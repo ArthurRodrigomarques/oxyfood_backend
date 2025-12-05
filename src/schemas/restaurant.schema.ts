@@ -24,8 +24,20 @@ export const updateRestaurantBodySchema = z.object({
   deliveryFee: z.number().nonnegative().optional(),
   freeDeliveryAbove: z.number().positive().optional().or(z.null()),
   pixKey: z.string().min(5).optional(),
-  logoUrl: z.string().url().optional().or(z.literal("")),
-  bannerUrl: z.string().url().optional().or(z.literal("")),
+  logoUrl: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal(""))
+    .or(z.null())
+    .nullable(),
+  bannerUrl: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal(""))
+    .or(z.null())
+    .nullable(),
 });
 
 export const updateRestaurantParamsSchema = z.object({
