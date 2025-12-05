@@ -3,6 +3,7 @@ import { Order } from "@prisma/client";
 import { z } from "zod";
 import { createOrderBodySchema } from "@/schemas/order.schema.js";
 import { Decimal } from "@prisma/client/runtime/library";
+import { getIO } from "@/lib/socket.js";
 
 type CreateOrderRequest = z.infer<typeof createOrderBodySchema> & {
   restaurantId: string;
@@ -21,33 +22,24 @@ export class CreateOrderUseCase {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
     });
-
-    if (!restaurant) {
-      throw new Error("Restaurante não encontrado.");
-    }
+    if (!restaurant) throw new Error("Restaurante não encontrado.");
 
     let subTotalPrice = new Decimal(0);
-
     const orderItemsData = [];
 
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
       });
-      if (!product) {
-        throw new Error(`Produto com ID ${item.productId} não encontrado.`);
-      }
+      if (!product) throw new Error("Produto não encontrado");
 
       const selectedOptions = await prisma.option.findMany({
-        where: {
-          id: { in: item.options || [] },
-        },
+        where: { id: { in: item.options || [] } },
       });
-
-      const optionsPrice = selectedOptions.reduce((total, option) => {
-        return total.add(option.priceDelta);
-      }, new Decimal(0));
-
+      const optionsPrice = selectedOptions.reduce(
+        (acc, opt) => acc.add(opt.priceDelta),
+        new Decimal(0)
+      );
       const unitPrice = product.basePrice.add(optionsPrice);
 
       subTotalPrice = subTotalPrice.add(unitPrice.mul(item.quantity));
@@ -55,8 +47,8 @@ export class CreateOrderUseCase {
       orderItemsData.push({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: unitPrice,
-        optionsDescription: selectedOptions.map((opt) => opt.name).join(", "),
+        unitPrice,
+        optionsDescription: selectedOptions.map((o) => o.name).join(", "),
       });
     }
 
@@ -74,7 +66,6 @@ export class CreateOrderUseCase {
         deliveryFee,
         totalPrice,
         restaurantId: restaurantId,
-
         orderItems: {
           create: orderItemsData.map((item) => ({
             quantity: item.quantity,
@@ -84,7 +75,21 @@ export class CreateOrderUseCase {
           })),
         },
       },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+      },
     });
+
+    try {
+      const io = getIO();
+      io.to(restaurantId).emit("new-order", order);
+    } catch (error) {
+      console.error("Erro ao emitir socket:", error);
+    }
 
     return order;
   }
