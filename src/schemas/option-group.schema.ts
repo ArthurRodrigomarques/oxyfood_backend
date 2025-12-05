@@ -23,3 +23,14 @@ export const createOptionGroupBodySchema = z.object({
 export const createOptionGroupParamsSchema = z.object({
   productId: z.string().uuid({ message: "ID do produto inválido." }),
 });
+
+export const updateOptionGroupBodySchema = z.object({
+  name: z.string().min(3).optional(),
+  type: z.enum(["SINGLE", "MULTIPLE"]).optional(),
+  minSelection: z.coerce.number().int().min(0).optional(),
+  maxSelection: z.coerce.number().int().min(1).optional(),
+});
+
+export const optionGroupParamsSchema = z.object({
+  groupId: z.string().uuid(),
+});

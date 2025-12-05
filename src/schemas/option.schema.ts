@@ -13,3 +13,12 @@ export const createOptionParamsSchema = z.object({
     .string()
     .uuid({ message: "ID do grupo de opcionais inválido." }),
 });
+
+export const updateOptionBodySchema = z.object({
+  name: z.string().min(1).optional(),
+  priceDelta: z.coerce.number().min(0).optional(),
+});
+
+export const optionParamsSchema = z.object({
+  optionId: z.string().uuid(),
+});

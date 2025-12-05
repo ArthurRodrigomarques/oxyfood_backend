@@ -10,4 +10,16 @@ export async function optionGroupRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     optionGroupController.create
   );
+
+  app.put(
+    "/option-groups/:groupId",
+    { onRequest: [authMiddleware] },
+    optionGroupController.update
+  );
+
+  app.delete(
+    "/option-groups/:groupId",
+    { onRequest: [authMiddleware] },
+    optionGroupController.delete
+  );
 }

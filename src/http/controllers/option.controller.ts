@@ -3,8 +3,12 @@ import { CreateOptionUseCase } from "@/use-cases/restaurant/create-option.use-ca
 import {
   createOptionBodySchema,
   createOptionParamsSchema,
+  optionParamsSchema,
+  updateOptionBodySchema,
 } from "@/schemas/option.schema.js";
 import { z } from "zod";
+import { UpdateOptionUseCase } from "@/use-cases/restaurant/update-option.use-case.js";
+import { DeleteOptionUseCase } from "@/use-cases/restaurant/delete-option.use-case.js";
 
 export class OptionController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -38,6 +42,35 @@ export class OptionController {
       }
       console.error(error);
       return reply.status(500).send({ message: "Erro interno do servidor." });
+    }
+  }
+
+  async update(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.userId!;
+      const { optionId } = optionParamsSchema.parse(request.params);
+      const body = updateOptionBodySchema.parse(request.body);
+
+      const updateUseCase = new UpdateOptionUseCase();
+      const option = await updateUseCase.execute({ optionId, userId, ...body });
+
+      return reply.status(200).send({ option });
+    } catch (error: any) {
+      return reply.status(400).send({ message: error.message });
+    }
+  }
+
+  async delete(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const userId = request.userId!;
+      const { optionId } = optionParamsSchema.parse(request.params);
+
+      const deleteUseCase = new DeleteOptionUseCase();
+      await deleteUseCase.execute({ optionId, userId });
+
+      return reply.status(204).send();
+    } catch (error: any) {
+      return reply.status(400).send({ message: error.message });
     }
   }
 }

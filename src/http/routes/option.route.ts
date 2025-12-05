@@ -10,4 +10,16 @@ export async function optionRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     optionController.create
   );
+
+  app.put(
+    "/options/:optionId",
+    { onRequest: [authMiddleware] },
+    optionController.update
+  );
+
+  app.delete(
+    "/options/:optionId",
+    { onRequest: [authMiddleware] },
+    optionController.delete
+  );
 }
