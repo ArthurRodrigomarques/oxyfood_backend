@@ -14,8 +14,9 @@ export const createOrderBodySchema = z.object({
   customerName: z.string().min(3, { message: "O nome é obrigatório." }),
   customerPhone: z.string().min(9, { message: "Telefone inválido." }),
   customerAddress: z.string().min(10, { message: "Morada inválida." }),
-  paymentMethod: z.enum(["Dinheiro", "Pix", "Cartao"], {
-    message: "Método de pagamento deve ser 'Dinheiro', 'Pix' ou 'Cartao'.",
+  // CORREÇÃO: Adicionado "CartaoOnline" na lista de permitidos
+  paymentMethod: z.enum(["Dinheiro", "Pix", "Cartao", "CartaoOnline"], {
+    message: "Método de pagamento inválido.",
   }),
   trocoPara: z.coerce.number().positive().optional(),
   items: z
@@ -37,8 +38,7 @@ export const updateOrderStatusParamsSchema = z.object({
 
 export const updateOrderStatusBodySchema = z.object({
   status: z.nativeEnum(OrderStatus, {
-    message:
-      "Status inválido. Deve ser 'PENDING', 'PREPARING', 'OUT', 'COMPLETED', or 'REJECTED'.",
+    message: "Status inválido.",
   }),
 });
 
