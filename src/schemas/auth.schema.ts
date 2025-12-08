@@ -16,3 +16,14 @@ export const loginUserBodySchema = z.object({
     .string()
     .min(6, { message: "A senha precisa ter no mínimo 6 caracteres." }),
 });
+
+export const forgotPasswordBodySchema = z.object({
+  email: z.string().email("E-mail inválido"),
+});
+
+export const resetPasswordBodySchema = z.object({
+  token: z.string().uuid("Token inválido"),
+  newPassword: z
+    .string()
+    .min(6, "A nova senha deve ter no mínimo 6 caracteres"),
+});
