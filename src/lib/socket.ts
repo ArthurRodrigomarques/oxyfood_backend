@@ -2,16 +2,12 @@ import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import jwt from "jsonwebtoken";
 
-let io: Server | null = null;
+export let io: Server | null = null;
+
 interface TokenPayload {
   sub: string;
   name: string;
   email: string;
-}
-interface AuthSocket extends Socket {
-  data: {
-    userId?: string;
-  };
 }
 
 export function initSocket(httpServer: HttpServer) {
@@ -48,12 +44,12 @@ export function initSocket(httpServer: HttpServer) {
 
   io.on("connection", (socket) => {
     console.log(
-      `Cliente autenticado conectado: ${socket.id} (User: ${socket.data.userId})`
+      `Cliente conectado: ${socket.id} (User: ${socket.data.userId})`
     );
 
     socket.on("join-restaurant", (restaurantId: string) => {
       socket.join(restaurantId);
-      console.log(`User ${socket.data.userId} entrou na sala ${restaurantId}`);
+      console.log(`User entrou na sala ${restaurantId}`);
     });
   });
 

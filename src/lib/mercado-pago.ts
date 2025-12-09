@@ -109,3 +109,25 @@ export async function createCheckoutPreference({
 
   return response.init_point;
 }
+
+export async function getPayment({
+  paymentId,
+  restaurantAccessToken,
+}: {
+  paymentId: string;
+  restaurantAccessToken: string;
+}) {
+  const client = new MercadoPagoConfig({
+    accessToken: restaurantAccessToken,
+  });
+
+  const payment = new Payment(client);
+
+  try {
+    const response = await payment.get({ id: paymentId });
+    return response;
+  } catch (error) {
+    console.error("Erro ao buscar pagamento no Mercado Pago:", error);
+    return null;
+  }
+}
