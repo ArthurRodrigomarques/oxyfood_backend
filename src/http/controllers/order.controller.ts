@@ -3,6 +3,7 @@ import { CreateOrderUseCase } from "@/use-cases/restaurant/create-order.use-case
 import { ListRestaurantOrdersUseCase } from "@/use-cases/restaurant/list-restaurant-orders.use-case.js";
 import { UpdateOrderStatusUseCase } from "@/use-cases/restaurant/update-order-status.use-case.js";
 import { GetOrderStatusUseCase } from "@/use-cases/restaurant/get-order-status.use-case.js";
+import { GetOrderDetailsUseCase } from "@/use-cases/order/get-order-details.use-case.js";
 import {
   createOrderBodySchema,
   createOrderParamsSchema,
@@ -97,6 +98,27 @@ export class OrderController {
       const orderStatus = await getStatus.execute({ orderId });
 
       return reply.status(200).send(orderStatus);
+    } catch (error: any) {
+      if (error instanceof Error) {
+        return reply.status(404).send({ message: error.message });
+      }
+      console.error(error);
+      return reply.status(500).send({ message: "Erro interno do servidor." });
+    }
+  }
+
+  // Novo método para detalhes completos
+  async getDetails(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const getOrderDetailsParamsSchema = z.object({
+        orderId: z.string().uuid(),
+      });
+      const { orderId } = getOrderDetailsParamsSchema.parse(request.params);
+
+      const getDetails = new GetOrderDetailsUseCase();
+      const { order } = await getDetails.execute({ orderId });
+
+      return reply.status(200).send({ order });
     } catch (error: any) {
       if (error instanceof Error) {
         return reply.status(404).send({ message: error.message });

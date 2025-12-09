@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { OrderController } from "../controllers/order.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js"; // O "PORTEIRO"
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const orderController = new OrderController();
 
@@ -20,4 +20,6 @@ export async function orderRoutes(app: FastifyInstance) {
   );
 
   app.get("/orders/:orderId/status", orderController.getStatus);
+
+  app.get("/orders/:orderId", orderController.getDetails);
 }
