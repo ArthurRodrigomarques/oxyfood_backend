@@ -8,13 +8,13 @@ const OrderItemSchema = z.object({
     .int({ message: "A quantidade deve ser um número inteiro." })
     .positive({ message: "A quantidade deve ser pelo menos 1." }),
   options: z.array(z.string().uuid()).optional(),
+  observation: z.string().optional(),
 });
 
 export const createOrderBodySchema = z.object({
   customerName: z.string().min(3, { message: "O nome é obrigatório." }),
   customerPhone: z.string().min(9, { message: "Telefone inválido." }),
   customerAddress: z.string().min(10, { message: "Morada inválida." }),
-  // CORREÇÃO: Adicionado "CartaoOnline" na lista de permitidos
   paymentMethod: z.enum(["Dinheiro", "Pix", "Cartao", "CartaoOnline"], {
     message: "Método de pagamento inválido.",
   }),

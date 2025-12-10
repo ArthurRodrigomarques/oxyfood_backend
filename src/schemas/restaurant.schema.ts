@@ -24,6 +24,7 @@ export const updateRestaurantBodySchema = z.object({
   deliveryFee: z.number().nonnegative().optional(),
   freeDeliveryAbove: z.number().positive().optional().or(z.null()),
   pixKey: z.string().min(5).optional(),
+  mercadoPagoAccessToken: z.string().optional(),
   logoUrl: z
     .string()
     .url()

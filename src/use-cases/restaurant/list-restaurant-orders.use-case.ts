@@ -32,6 +32,10 @@ export class ListRestaurantOrdersUseCase {
     const orders = await prisma.order.findMany({
       where: {
         restaurantId: restaurantId,
+        NOT: {
+          paymentMethod: { in: ["Pix", "Cartão (Online)"] },
+          paymentStatus: "PENDING",
+        },
       },
       include: {
         orderItems: {

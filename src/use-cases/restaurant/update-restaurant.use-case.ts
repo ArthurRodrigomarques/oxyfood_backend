@@ -11,6 +11,7 @@ interface UpdateRestaurantRequest {
   deliveryFee?: number;
   freeDeliveryAbove?: number | null;
   pixKey?: string;
+  mercadoPagoAccessToken?: string;
 }
 
 export class UpdateRestaurantUseCase {

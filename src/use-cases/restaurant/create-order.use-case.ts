@@ -31,8 +31,46 @@ export class CreateOrderUseCase {
       throw new Error("Restaurante não encontrado.");
     }
 
+    // --- LÓGICA DE SELEÇÃO DO TOKEN (Fallback) ---
+    // Tenta pegar do Banco. Se não tiver, pega do .env
+    const tokenToUse =
+      restaurant.mercadoPagoAccessToken || process.env.MP_ACCESS_TOKEN;
+
+    console.log("\n==================================================");
+    console.log("🕵️‍♂️ DEBUG: CREATE ORDER (Versão com Fallback)");
+    console.log(`🏢 Restaurante: ${restaurant.name}`);
+    console.log(`💳 Método: ${paymentMethod}`);
+    console.log(
+      `🏦 Token no DB: ${
+        restaurant.mercadoPagoAccessToken ? "✅ EXISTE" : "❌ NULL"
+      }`
+    );
+    console.log(
+      `🌍 Token no ENV: ${
+        process.env.MP_ACCESS_TOKEN ? "✅ EXISTE" : "❌ NULL"
+      }`
+    );
+    console.log(
+      `🔑 TOKEN FINAL A SER USADO: ${tokenToUse ? "✅ DEFINIDO" : "❌ NENHUM"}`
+    );
+    console.log("==================================================\n");
+
     if (!restaurant.isOpen) {
       throw new Error("Este restaurante está fechado no momento.");
+    }
+
+    const isOnlinePayment =
+      paymentMethod === "Pix" || paymentMethod === "CartaoOnline";
+
+    // --- CORREÇÃO AQUI ---
+    // Agora verificamos 'tokenToUse' em vez de apenas 'restaurant.mercadoPagoAccessToken'
+    if (isOnlinePayment && !tokenToUse) {
+      console.error(
+        "❌ ERRO FATAL: Pagamento Online solicitado mas nenhum Token foi encontrado (nem DB, nem ENV)."
+      );
+      throw new Error(
+        "Este restaurante não configurou pagamentos online e o servidor não possui chave padrão."
+      );
     }
 
     let subTotalPrice = new Decimal(0);
@@ -67,11 +105,18 @@ export class CreateOrderUseCase {
 
       subTotalPrice = subTotalPrice.add(unitPrice.mul(item.quantity));
 
+      let optionsText = selectedOptions.map((opt) => opt.name).join(", ");
+      if (item.observation) {
+        optionsText += optionsText
+          ? ` | Obs: ${item.observation}`
+          : `Obs: ${item.observation}`;
+      }
+
       orderItemsData.push({
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: unitPrice,
-        optionsDescription: selectedOptions.map((opt) => opt.name).join(", "),
+        optionsDescription: optionsText,
         title: product.name,
       });
     }
@@ -94,6 +139,7 @@ export class CreateOrderUseCase {
         totalPrice,
         restaurantId: restaurantId,
         paymentStatus: "PENDING",
+        status: "PENDING",
 
         orderItems: {
           create: orderItemsData.map((item) => ({
@@ -113,10 +159,10 @@ export class CreateOrderUseCase {
       },
     });
 
-    if (restaurant.mercadoPagoAccessToken) {
+    // Se for pagamento online e TEMOS um token (seja do banco ou env)
+    if (isOnlinePayment && tokenToUse) {
       console.log(
-        "✅ Token do Mercado Pago encontrado:",
-        restaurant.mercadoPagoAccessToken
+        "🚀 Iniciando chamada ao Mercado Pago com o token selecionado..."
       );
 
       if (paymentMethod === "Pix") {
@@ -128,7 +174,7 @@ export class CreateOrderUseCase {
             }`,
             payerEmail: "cliente@oxyfood.com",
             payerFirstName: customerName.split(" ")[0],
-            restaurantAccessToken: restaurant.mercadoPagoAccessToken,
+            restaurantAccessToken: tokenToUse, // <--- USA A VARIÁVEL CORRETA
             orderId: order.id,
             restaurantId: restaurant.id,
           });
@@ -143,10 +189,12 @@ export class CreateOrderUseCase {
 
           Object.assign(order, {
             qrCodeBase64: paymentData.qrCodeBase64,
-            copyPaste: paymentData.qrCode,
+            paymentLink: paymentData.qrCode,
           });
         } catch (error) {
-          console.error("Erro ao gerar Pix no Mercado Pago:", error);
+          console.error("❌ Erro ao gerar Pix:", error);
+          await prisma.order.delete({ where: { id: order.id } });
+          throw new Error("Falha ao gerar Pix. Tente novamente.");
         }
       }
 
@@ -161,7 +209,7 @@ export class CreateOrderUseCase {
             })),
             deliveryFee: Number(deliveryFee),
             payerEmail: "cliente@oxyfood.com",
-            restaurantAccessToken: restaurant.mercadoPagoAccessToken,
+            restaurantAccessToken: tokenToUse, // <--- USA A VARIÁVEL CORRETA
             orderId: order.id,
             restaurantId: restaurant.id,
           });
@@ -175,16 +223,21 @@ export class CreateOrderUseCase {
 
           Object.assign(order, { paymentLink: checkoutUrl });
         } catch (error) {
-          console.error("Erro ao gerar Checkout:", error);
+          console.error("❌ Erro ao gerar Checkout:", error);
+          await prisma.order.delete({ where: { id: order.id } });
+          throw new Error("Falha ao gerar Link de Pagamento. Tente novamente.");
         }
       }
     }
 
-    try {
-      const io = getIO();
-      io.to(restaurantId).emit("new-order", order);
-    } catch (error) {
-      console.error("Erro ao emitir evento de socket:", error);
+    // Se NÃO for online, avisa o socket imediatamente
+    if (!isOnlinePayment) {
+      try {
+        const io = getIO();
+        io.to(restaurantId).emit("new-order", order);
+      } catch (error) {
+        console.error(error);
+      }
     }
 
     return order;

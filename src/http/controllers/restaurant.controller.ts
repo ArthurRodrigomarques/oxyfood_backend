@@ -60,7 +60,19 @@ export class RestaurantController {
       const { restaurantId } = updateRestaurantParamsSchema.parse(
         request.params
       );
+
+      console.log("\n--- 📥 DEBUG UPDATE CONTROLLER ---");
+      console.log(
+        "Recebido Payload (Body):",
+        JSON.stringify(request.body, null, 2)
+      );
+
       const body = updateRestaurantBodySchema.parse(request.body);
+
+      console.log(
+        "Token MP no Body Validado:",
+        body.mercadoPagoAccessToken ? "✅ PRESENTE" : "❌ AUSENTE"
+      );
 
       const updateRestaurant = new UpdateRestaurantUseCase();
       const restaurant = await updateRestaurant.execute({
@@ -69,8 +81,15 @@ export class RestaurantController {
         ...body,
       });
 
+      console.log(
+        "Update Concluído. Token salvo no DB:",
+        restaurant.mercadoPagoAccessToken ? "✅ SIM" : "❌ NÃO"
+      );
+      console.log("----------------------------------\n");
+
       return reply.status(200).send({ restaurant });
     } catch (error: any) {
+      console.error("❌ Erro no Update Controller:", error);
       if (error instanceof z.ZodError) {
         return reply
           .status(400)

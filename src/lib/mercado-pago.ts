@@ -28,6 +28,12 @@ export async function generatePixPayment({
 
   const payment = new Payment(client);
 
+  const apiUrl = process.env.API_URL || "http://localhost:3333";
+
+  const notificationUrl = apiUrl.includes("localhost")
+    ? undefined
+    : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
+
   const body = {
     transaction_amount: transactionAmount,
     description: description,
@@ -36,7 +42,7 @@ export async function generatePixPayment({
       email: payerEmail,
       first_name: payerFirstName,
     },
-    notification_url: `${process.env.API_URL}/webhooks/mercadopago?restaurantId=${restaurantId}`,
+    notification_url: notificationUrl,
     metadata: {
       order_id: orderId,
     },
@@ -89,25 +95,57 @@ export async function createCheckoutPreference({
     });
   }
 
-  const response = await preference.create({
-    body: {
-      items: preferenceItems,
-      payer: {
-        email: payerEmail,
-      },
-      back_urls: {
-        success: `${process.env.FRONTEND_URL}/orders/${orderId}`,
-        failure: `${process.env.FRONTEND_URL}/orders/${orderId}`,
-        pending: `${process.env.FRONTEND_URL}/orders/${orderId}`,
-      },
-      auto_return: "approved",
-      notification_url: `${process.env.API_URL}/webhooks/mercadopago?restaurantId=${restaurantId}`,
-      external_reference: orderId,
-      statement_descriptor: "OXYFOOD",
-    },
-  });
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const apiUrl = process.env.API_URL || "http://localhost:3333";
 
-  return response.init_point;
+  // URLs de retorno
+  const backUrlSuccess = `${frontendUrl}/orders/${orderId}`;
+  const backUrlFailure = `${frontendUrl}/orders/${orderId}`;
+  const backUrlPending = `${frontendUrl}/orders/${orderId}`;
+
+  // Proteção 1: Webhook (Notification URL)
+  const notificationUrl = apiUrl.includes("localhost")
+    ? undefined
+    : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
+
+  // Proteção 2: Auto Return (Retorno Automático)
+  // Só ativa se estiver em HTTPS (Produção). Em HTTP (Localhost), deve ser undefined.
+  const isProduction = frontendUrl.startsWith("https");
+  const autoReturn = isProduction ? "approved" : undefined;
+
+  const preferenceBody = {
+    items: preferenceItems,
+    payer: {
+      email: payerEmail,
+    },
+    back_urls: {
+      success: backUrlSuccess,
+      failure: backUrlFailure,
+      pending: backUrlPending,
+    },
+    auto_return: autoReturn, // undefined em localhost
+    external_reference: orderId,
+    statement_descriptor: "OXYFOOD",
+    notification_url: notificationUrl,
+  };
+
+  console.log("=== DEBUG CHECKOUT PAYLOAD ===");
+  console.log(
+    `Frontend Seguro (HTTPS)? ${isProduction ? "SIM" : "NÃO (Localhost)"}`
+  );
+  console.log(`Auto Return Ativo? ${autoReturn || "NÃO (Undefined)"}`);
+  console.log(JSON.stringify(preferenceBody, null, 2));
+  console.log("==============================");
+
+  try {
+    const response = await preference.create({
+      body: preferenceBody,
+    });
+    return response.init_point;
+  } catch (error: any) {
+    console.error("Erro fatal MP:", JSON.stringify(error, null, 2));
+    throw error;
+  }
 }
 
 export async function getPayment({
