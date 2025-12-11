@@ -31,29 +31,8 @@ export class CreateOrderUseCase {
       throw new Error("Restaurante não encontrado.");
     }
 
-    // --- LÓGICA DE SELEÇÃO DO TOKEN (Fallback) ---
-    // Tenta pegar do Banco. Se não tiver, pega do .env
     const tokenToUse =
       restaurant.mercadoPagoAccessToken || process.env.MP_ACCESS_TOKEN;
-
-    console.log("\n==================================================");
-    console.log("🕵️‍♂️ DEBUG: CREATE ORDER (Versão com Fallback)");
-    console.log(`🏢 Restaurante: ${restaurant.name}`);
-    console.log(`💳 Método: ${paymentMethod}`);
-    console.log(
-      `🏦 Token no DB: ${
-        restaurant.mercadoPagoAccessToken ? "✅ EXISTE" : "❌ NULL"
-      }`
-    );
-    console.log(
-      `🌍 Token no ENV: ${
-        process.env.MP_ACCESS_TOKEN ? "✅ EXISTE" : "❌ NULL"
-      }`
-    );
-    console.log(
-      `🔑 TOKEN FINAL A SER USADO: ${tokenToUse ? "✅ DEFINIDO" : "❌ NENHUM"}`
-    );
-    console.log("==================================================\n");
 
     if (!restaurant.isOpen) {
       throw new Error("Este restaurante está fechado no momento.");
@@ -62,15 +41,8 @@ export class CreateOrderUseCase {
     const isOnlinePayment =
       paymentMethod === "Pix" || paymentMethod === "CartaoOnline";
 
-    // --- CORREÇÃO AQUI ---
-    // Agora verificamos 'tokenToUse' em vez de apenas 'restaurant.mercadoPagoAccessToken'
     if (isOnlinePayment && !tokenToUse) {
-      console.error(
-        "❌ ERRO FATAL: Pagamento Online solicitado mas nenhum Token foi encontrado (nem DB, nem ENV)."
-      );
-      throw new Error(
-        "Este restaurante não configurou pagamentos online e o servidor não possui chave padrão."
-      );
+      throw new Error("Pagamento online indisponível: Token não configurado.");
     }
 
     let subTotalPrice = new Decimal(0);
@@ -86,9 +58,7 @@ export class CreateOrderUseCase {
       }
 
       if (!product.available) {
-        throw new Error(
-          `O produto "${product.name}" esgotou ou não está disponível.`
-        );
+        throw new Error(`O produto "${product.name}" não está disponível.`);
       }
 
       const selectedOptions = await prisma.option.findMany({
@@ -108,8 +78,8 @@ export class CreateOrderUseCase {
       let optionsText = selectedOptions.map((opt) => opt.name).join(", ");
       if (item.observation) {
         optionsText += optionsText
-          ? ` | Obs: ${item.observation}`
-          : `Obs: ${item.observation}`;
+          ? ` | ${item.observation}`
+          : item.observation;
       }
 
       orderItemsData.push({
@@ -117,7 +87,7 @@ export class CreateOrderUseCase {
         quantity: item.quantity,
         unitPrice: unitPrice,
         optionsDescription: optionsText,
-        title: product.name,
+        title: product.name || "Item do Cardápio",
       });
     }
 
@@ -140,7 +110,6 @@ export class CreateOrderUseCase {
         restaurantId: restaurantId,
         paymentStatus: "PENDING",
         status: "PENDING",
-
         orderItems: {
           create: orderItemsData.map((item) => ({
             quantity: item.quantity,
@@ -151,30 +120,22 @@ export class CreateOrderUseCase {
         },
       },
       include: {
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
+        orderItems: { include: { product: true } },
       },
     });
 
-    // Se for pagamento online e TEMOS um token (seja do banco ou env)
     if (isOnlinePayment && tokenToUse) {
-      console.log(
-        "🚀 Iniciando chamada ao Mercado Pago com o token selecionado..."
-      );
+      const safeEmail = "cliente@oxyfood.com";
+      const safeFirstName = customerName.split(" ")[0] || "Cliente";
 
       if (paymentMethod === "Pix") {
         try {
           const paymentData = await generatePixPayment({
             transactionAmount: Number(totalPrice),
-            description: `Pedido #${order.id.slice(0, 4).toUpperCase()} - ${
-              restaurant.name
-            }`,
-            payerEmail: "cliente@oxyfood.com",
-            payerFirstName: customerName.split(" ")[0],
-            restaurantAccessToken: tokenToUse, // <--- USA A VARIÁVEL CORRETA
+            description: `Pedido #${order.id.slice(0, 4)}`,
+            payerEmail: safeEmail,
+            payerFirstName: safeFirstName,
+            restaurantAccessToken: tokenToUse,
             orderId: order.id,
             restaurantId: restaurant.id,
           });
@@ -183,7 +144,7 @@ export class CreateOrderUseCase {
             where: { id: order.id },
             data: {
               mercadoPagoId: paymentData.id,
-              paymentLink: paymentData.qrCode,
+              paymentLink: paymentData.qrCode || null,
             },
           });
 
@@ -192,9 +153,8 @@ export class CreateOrderUseCase {
             paymentLink: paymentData.qrCode,
           });
         } catch (error) {
-          console.error("❌ Erro ao gerar Pix:", error);
           await prisma.order.delete({ where: { id: order.id } });
-          throw new Error("Falha ao gerar Pix. Tente novamente.");
+          throw new Error("Erro ao gerar Pix. Tente novamente.");
         }
       }
 
@@ -203,40 +163,37 @@ export class CreateOrderUseCase {
           const checkoutUrl = await createCheckoutPreference({
             items: orderItemsData.map((item) => ({
               id: item.productId,
-              title: item.title || "Item do Cardápio",
+              title: item.title,
               quantity: item.quantity,
               unit_price: Number(item.unitPrice),
             })),
             deliveryFee: Number(deliveryFee),
-            payerEmail: "cliente@oxyfood.com",
-            restaurantAccessToken: tokenToUse, // <--- USA A VARIÁVEL CORRETA
+            payerEmail: safeEmail,
+            restaurantAccessToken: tokenToUse,
             orderId: order.id,
             restaurantId: restaurant.id,
           });
 
           await prisma.order.update({
             where: { id: order.id },
-            data: {
-              paymentLink: checkoutUrl,
-            },
+            data: { paymentLink: checkoutUrl || null },
           });
 
-          Object.assign(order, { paymentLink: checkoutUrl });
+          order.paymentLink = checkoutUrl;
         } catch (error) {
-          console.error("❌ Erro ao gerar Checkout:", error);
+          console.error(error);
           await prisma.order.delete({ where: { id: order.id } });
-          throw new Error("Falha ao gerar Link de Pagamento. Tente novamente.");
+          throw new Error("Erro ao gerar Checkout. Tente novamente.");
         }
       }
     }
 
-    // Se NÃO for online, avisa o socket imediatamente
     if (!isOnlinePayment) {
       try {
         const io = getIO();
         io.to(restaurantId).emit("new-order", order);
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        // Ignora erro de socket
       }
     }
 

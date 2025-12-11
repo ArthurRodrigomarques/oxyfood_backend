@@ -21,7 +21,7 @@ export class GetOrderDetailsUseCase {
             product: {
               select: {
                 name: true,
-                imageUrl: true, // Garante que a imagem venha
+                imageUrl: true,
                 basePrice: true,
               },
             },

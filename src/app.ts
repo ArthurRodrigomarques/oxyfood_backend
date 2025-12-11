@@ -10,6 +10,9 @@ import { optionGroupRoutes } from "./http/routes/option-group.routes.js";
 import { optionRoutes } from "./http/routes/option.route.js";
 import { orderRoutes } from "./http/routes/order.routes.js";
 import { webhookRoutes } from "./http/routes/webhook.routes.js";
+import { debugRoutes } from "./http/routes/debug.route.js";
+import { env } from "process";
+import { ZodError } from "zod";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -50,3 +53,21 @@ app.register(optionRoutes);
 app.register(orderRoutes);
 
 app.register(webhookRoutes);
+
+app.register(debugRoutes);
+
+app.setErrorHandler((error, _, reply) => {
+  if (error instanceof ZodError) {
+    return reply
+      .status(400)
+      .send({ message: "Validation error.", issues: error.format() });
+  }
+
+  if (env.NODE_ENV !== "production") {
+    console.error(error);
+  } else {
+    // TODO: Log to external tool
+  }
+
+  return reply.status(500).send({ message: "Internal server error." });
+});

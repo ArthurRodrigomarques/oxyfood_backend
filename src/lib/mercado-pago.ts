@@ -1,5 +1,8 @@
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 
+const getClient = (token: string) =>
+  new MercadoPagoConfig({ accessToken: token });
+
 interface CommonParams {
   restaurantAccessToken: string;
   orderId: string;
@@ -13,53 +16,6 @@ interface GeneratePixParams extends CommonParams {
   payerFirstName: string;
 }
 
-export async function generatePixPayment({
-  transactionAmount,
-  description,
-  payerEmail,
-  payerFirstName,
-  restaurantAccessToken,
-  orderId,
-  restaurantId,
-}: GeneratePixParams) {
-  const client = new MercadoPagoConfig({
-    accessToken: restaurantAccessToken,
-  });
-
-  const payment = new Payment(client);
-
-  const apiUrl = process.env.API_URL || "http://localhost:3333";
-
-  const notificationUrl = apiUrl.includes("localhost")
-    ? undefined
-    : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
-
-  const body = {
-    transaction_amount: transactionAmount,
-    description: description,
-    payment_method_id: "pix",
-    payer: {
-      email: payerEmail,
-      first_name: payerFirstName,
-    },
-    notification_url: notificationUrl,
-    metadata: {
-      order_id: orderId,
-    },
-  };
-
-  const response = await payment.create({ body });
-
-  return {
-    id: response.id?.toString(),
-    status: response.status,
-    qrCode: response.point_of_interaction?.transaction_data?.qr_code,
-    qrCodeBase64:
-      response.point_of_interaction?.transaction_data?.qr_code_base64,
-    ticketUrl: response.point_of_interaction?.transaction_data?.ticket_url,
-  };
-}
-
 interface CreatePreferenceParams extends CommonParams {
   items: {
     id: string;
@@ -71,6 +27,56 @@ interface CreatePreferenceParams extends CommonParams {
   deliveryFee: number;
 }
 
+export async function generatePixPayment({
+  transactionAmount,
+  description,
+  payerEmail,
+  payerFirstName,
+  restaurantAccessToken,
+  orderId,
+  restaurantId,
+}: GeneratePixParams) {
+  const payment = new Payment(getClient(restaurantAccessToken));
+
+  const apiUrl = process.env.API_URL || "http://localhost:3333";
+  const notificationUrl = apiUrl.includes("localhost")
+    ? undefined
+    : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
+
+  const safeDescription = description?.trim() || `Pedido ${orderId}`;
+  const uniqueEmail = payerEmail || `cliente_${Date.now()}@oxyfood.test`;
+
+  try {
+    const response = await payment.create({
+      body: {
+        transaction_amount: Number(transactionAmount.toFixed(2)),
+        description: safeDescription.substring(0, 100),
+        payment_method_id: "pix",
+        payer: {
+          email: uniqueEmail,
+          first_name: payerFirstName || "Cliente",
+        },
+        notification_url: notificationUrl,
+        metadata: {
+          order_id: orderId,
+        },
+      },
+    });
+
+    return {
+      id: response.id?.toString(),
+      status: response.status,
+      qrCode: response.point_of_interaction?.transaction_data?.qr_code,
+      qrCodeBase64:
+        response.point_of_interaction?.transaction_data?.qr_code_base64,
+      ticketUrl: response.point_of_interaction?.transaction_data?.ticket_url,
+    };
+  } catch (error) {
+    console.error("Erro MP Pix:", error);
+    throw error;
+  }
+}
+
 export async function createCheckoutPreference({
   items,
   payerEmail,
@@ -79,71 +85,65 @@ export async function createCheckoutPreference({
   restaurantId,
   deliveryFee,
 }: CreatePreferenceParams) {
-  const client = new MercadoPagoConfig({
-    accessToken: restaurantAccessToken,
-  });
+  const preference = new Preference(getClient(restaurantAccessToken));
 
-  const preference = new Preference(client);
+  const preferenceItems = items.map((item) => ({
+    id: item.id || "item-generico",
+    title: item.title && item.title.trim() ? item.title : "Produto",
+    quantity: Number(item.quantity),
+    currency_id: "BRL",
+    unit_price: Number(Number(item.unit_price).toFixed(2)),
+  }));
 
-  const preferenceItems = [...items];
   if (deliveryFee > 0) {
     preferenceItems.push({
       id: "delivery-fee",
       title: "Taxa de Entrega",
       quantity: 1,
-      unit_price: deliveryFee,
+      currency_id: "BRL",
+      unit_price: Number(Number(deliveryFee).toFixed(2)),
     });
   }
 
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const apiUrl = process.env.API_URL || "http://localhost:3333";
 
-  // URLs de retorno
-  const backUrlSuccess = `${frontendUrl}/orders/${orderId}`;
-  const backUrlFailure = `${frontendUrl}/orders/${orderId}`;
-  const backUrlPending = `${frontendUrl}/orders/${orderId}`;
+  const backUrl = `${frontendUrl}/orders/${orderId}`;
 
-  // Proteção 1: Webhook (Notification URL)
   const notificationUrl = apiUrl.includes("localhost")
     ? undefined
     : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
 
-  // Proteção 2: Auto Return (Retorno Automático)
-  // Só ativa se estiver em HTTPS (Produção). Em HTTP (Localhost), deve ser undefined.
-  const isProduction = frontendUrl.startsWith("https");
-  const autoReturn = isProduction ? "approved" : undefined;
-
-  const preferenceBody = {
-    items: preferenceItems,
-    payer: {
-      email: payerEmail,
-    },
-    back_urls: {
-      success: backUrlSuccess,
-      failure: backUrlFailure,
-      pending: backUrlPending,
-    },
-    auto_return: autoReturn, // undefined em localhost
-    external_reference: orderId,
-    statement_descriptor: "OXYFOOD",
-    notification_url: notificationUrl,
-  };
-
-  console.log("=== DEBUG CHECKOUT PAYLOAD ===");
-  console.log(
-    `Frontend Seguro (HTTPS)? ${isProduction ? "SIM" : "NÃO (Localhost)"}`
-  );
-  console.log(`Auto Return Ativo? ${autoReturn || "NÃO (Undefined)"}`);
-  console.log(JSON.stringify(preferenceBody, null, 2));
-  console.log("==============================");
+  const uniqueEmail = `test_user_${Date.now()}_${Math.floor(
+    Math.random() * 999
+  )}@testuser.com`;
 
   try {
     const response = await preference.create({
-      body: preferenceBody,
+      body: {
+        items: preferenceItems,
+        payer: {
+          email: uniqueEmail,
+        },
+        back_urls: {
+          success: backUrl,
+          failure: backUrl,
+          pending: backUrl,
+        },
+        external_reference: orderId,
+        statement_descriptor: "OXYFOOD",
+        notification_url: notificationUrl,
+        binary_mode: false,
+      },
     });
+
+    if (!response.init_point) {
+      throw new Error("Link não gerado pelo Mercado Pago.");
+    }
+
     return response.init_point;
-  } catch (error: any) {
-    console.error("Erro fatal MP:", JSON.stringify(error, null, 2));
+  } catch (error) {
+    console.error("Erro MP Preference:", error);
     throw error;
   }
 }
@@ -155,17 +155,10 @@ export async function getPayment({
   paymentId: string;
   restaurantAccessToken: string;
 }) {
-  const client = new MercadoPagoConfig({
-    accessToken: restaurantAccessToken,
-  });
-
-  const payment = new Payment(client);
-
+  const payment = new Payment(getClient(restaurantAccessToken));
   try {
-    const response = await payment.get({ id: paymentId });
-    return response;
+    return await payment.get({ id: paymentId });
   } catch (error) {
-    console.error("Erro ao buscar pagamento no Mercado Pago:", error);
     return null;
   }
 }

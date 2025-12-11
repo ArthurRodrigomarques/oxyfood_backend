@@ -33,7 +33,7 @@ export class ListRestaurantOrdersUseCase {
       where: {
         restaurantId: restaurantId,
         NOT: {
-          paymentMethod: { in: ["Pix", "Cartão (Online)"] },
+          paymentMethod: { in: ["Pix", "Cartão (Online)", "CartaoOnline"] },
           paymentStatus: "PENDING",
         },
       },
