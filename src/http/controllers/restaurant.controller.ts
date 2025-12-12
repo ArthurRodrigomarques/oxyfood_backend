@@ -3,6 +3,7 @@ import { CreateRestaurantUseCase } from "@/use-cases/restaurant/create-restauran
 import { GetPublicRestaurantUseCase } from "@/use-cases/restaurant/get-public-restaurant.use-case.js";
 import { ToggleRestaurantStatusUseCase } from "@/use-cases/restaurant/toggle-restaurant-status.use-case.js";
 import { GetAdminMenuUseCase } from "@/use-cases/restaurant/get-admin-menu.use-case.js";
+import { UpsertOpeningHoursUseCase } from "@/use-cases/restaurant/upsert-opening-hours.use-case.js";
 import {
   createRestaurantBodySchema,
   getPublicRestaurantParamsSchema,
@@ -174,6 +175,37 @@ export class RestaurantController {
       const metrics = await getMetrics.execute({ restaurantId, userId });
 
       return reply.status(200).send(metrics);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: "Dados inválidos" });
+      }
+      return reply.status(400).send({ message: error.message });
+    }
+  }
+
+  async updateOpeningHours(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const paramsSchema = z.object({
+        restaurantId: z.string().uuid(),
+      });
+
+      const bodySchema = z.object({
+        schedules: z.array(
+          z.object({
+            dayOfWeek: z.number().min(0).max(6),
+            openTime: z.string().regex(/^\d{2}:\d{2}$/),
+            closeTime: z.string().regex(/^\d{2}:\d{2}$/),
+          })
+        ),
+      });
+
+      const { restaurantId } = paramsSchema.parse(request.params);
+      const { schedules } = bodySchema.parse(request.body);
+
+      const useCase = new UpsertOpeningHoursUseCase();
+      const result = await useCase.execute({ restaurantId, schedules });
+
+      return reply.status(200).send(result);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ message: "Dados inválidos" });

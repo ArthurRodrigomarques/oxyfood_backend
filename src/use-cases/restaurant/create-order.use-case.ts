@@ -25,18 +25,59 @@ export class CreateOrderUseCase {
   }: CreateOrderRequest): Promise<Order> {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
+      include: { openingHours: true },
     });
 
     if (!restaurant) {
       throw new Error("Restaurante não encontrado.");
     }
 
+    const now = new Date();
+    const brazilTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+    );
+    const currentDay = brazilTime.getDay();
+    const currentHour = brazilTime.getHours();
+    const currentMinute = brazilTime.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    const todaySchedules = restaurant.openingHours.filter(
+      (oh) => oh.dayOfWeek === currentDay
+    );
+
+    if (todaySchedules.length > 0) {
+      const isOpenNow = todaySchedules.some((schedule) => {
+        const [openH, openM] = schedule.openTime.split(":").map(Number);
+        const [closeH, closeM] = schedule.closeTime.split(":").map(Number);
+        const openTotal = openH * 60 + openM;
+        const closeTotal = closeH * 60 + closeM;
+
+        if (closeTotal < openTotal) {
+          return (
+            currentTimeInMinutes >= openTotal ||
+            currentTimeInMinutes < closeTotal
+          );
+        }
+        return (
+          currentTimeInMinutes >= openTotal && currentTimeInMinutes < closeTotal
+        );
+      });
+
+      if (!isOpenNow) {
+        throw new Error(
+          "O restaurante está fechado de acordo com o horário programado."
+        );
+      }
+    } else if (restaurant.openingHours.length > 0) {
+      throw new Error("O restaurante não abre hoje.");
+    } else {
+      if (!restaurant.isOpen) {
+        throw new Error("Este restaurante está fechado no momento.");
+      }
+    }
+
     const tokenToUse =
       restaurant.mercadoPagoAccessToken || process.env.MP_ACCESS_TOKEN;
-
-    if (!restaurant.isOpen) {
-      throw new Error("Este restaurante está fechado no momento.");
-    }
 
     const isOnlinePayment =
       paymentMethod === "Pix" || paymentMethod === "CartaoOnline";
@@ -192,9 +233,7 @@ export class CreateOrderUseCase {
       try {
         const io = getIO();
         io.to(restaurantId).emit("new-order", order);
-      } catch (e) {
-        // Ignora erro de socket
-      }
+      } catch (e) {}
     }
 
     return order;

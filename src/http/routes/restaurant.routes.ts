@@ -25,6 +25,12 @@ export async function restaurantRoutes(app: FastifyInstance) {
     restaurantController.update
   );
 
+  app.put(
+    "/restaurants/:restaurantId/opening-hours",
+    { onRequest: [authMiddleware] },
+    restaurantController.updateOpeningHours
+  );
+
   app.patch(
     "/restaurants/:restaurantId/toggle-status",
     { onRequest: [authMiddleware] },
