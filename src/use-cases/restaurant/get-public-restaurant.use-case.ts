@@ -10,8 +10,8 @@ export class GetPublicRestaurantUseCase {
       where: {
         slug,
       },
-
       include: {
+        openingHours: true,
         categories: {
           orderBy: {
             orderIndex: "asc",
