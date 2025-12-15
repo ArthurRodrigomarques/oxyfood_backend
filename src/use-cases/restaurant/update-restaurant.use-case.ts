@@ -10,6 +10,8 @@ interface UpdateRestaurantRequest {
   phoneNumber?: string;
   deliveryFee?: number;
   freeDeliveryAbove?: number | null;
+  deliveryTimeMin?: number;
+  deliveryTimeMax?: number;
   pixKey?: string;
   mercadoPagoAccessToken?: string;
 }
