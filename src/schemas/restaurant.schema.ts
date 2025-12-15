@@ -23,6 +23,8 @@ export const updateRestaurantBodySchema = z.object({
   phoneNumber: z.string().min(9).optional(),
   deliveryFee: z.number().nonnegative().optional(),
   freeDeliveryAbove: z.number().positive().optional().or(z.null()),
+  deliveryTimeMin: z.number().min(1).optional(),
+  deliveryTimeMax: z.number().min(1).optional(),
   pixKey: z.string().min(5).optional(),
   mercadoPagoAccessToken: z.string().optional(),
   logoUrl: z
