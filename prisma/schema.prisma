@@ -36,6 +36,8 @@ model Restaurant {
   isOpen                 Boolean       @default(false) @map("is_open")
   deliveryFee            Decimal       @default(0.00) @db.Decimal(10, 2) @map("delivery_fee")
   freeDeliveryAbove      Decimal?      @db.Decimal(10, 2) @map("free_delivery_above")
+  deliveryTimeMin        Int           @default(30) @map("delivery_time_min")
+  deliveryTimeMax        Int           @default(45) @map("delivery_time_max")
   createdAt              DateTime      @default(now()) @map("created_at")
   updatedAt              DateTime      @updatedAt @map("updated_at")
   userId                 String        @map("user_id")
