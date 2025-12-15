@@ -23,7 +23,7 @@ export function initSocket(httpServer: HttpServer) {
       socket.handshake.auth.token || socket.handshake.headers.authorization;
 
     if (!token) {
-      return next(new Error("Autenticação necessária."));
+      return next();
     }
 
     try {
@@ -43,13 +43,28 @@ export function initSocket(httpServer: HttpServer) {
   });
 
   io.on("connection", (socket) => {
+    const isAuth = !!socket.data.userId;
     console.log(
-      `Cliente conectado: ${socket.id} (User: ${socket.data.userId})`
+      `Conexão: ${socket.id} | Tipo: ${
+        isAuth ? "Restaurante/Admin" : "Cliente Anônimo"
+      }`
     );
 
     socket.on("join-restaurant", (restaurantId: string) => {
+      if (!socket.data.userId) {
+        console.warn(
+          `Tentativa não autorizada de entrar no restaurante ${restaurantId}`
+        );
+        return;
+      }
+
       socket.join(restaurantId);
-      console.log(`User entrou na sala ${restaurantId}`);
+      console.log(`Dono entrou na sala do restaurante: ${restaurantId}`);
+    });
+
+    socket.on("join-order", (orderId: string) => {
+      socket.join(orderId);
+      console.log(`Cliente entrou na sala do pedido: ${orderId}`);
     });
   });
 
