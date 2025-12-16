@@ -13,6 +13,7 @@ import {
   getOrderStatusParamsSchema,
 } from "@/schemas/order.schema.js";
 import { z } from "zod";
+import { CancelOrderUseCase } from "@/use-cases/order/cancel-order.use-case.js";
 
 export class OrderController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -122,6 +123,29 @@ export class OrderController {
     } catch (error: any) {
       if (error instanceof Error) {
         return reply.status(404).send({ message: error.message });
+      }
+      console.error(error);
+      return reply.status(500).send({ message: "Erro interno do servidor." });
+    }
+  }
+
+  async cancel(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const cancelOrderParamsSchema = z.object({
+        orderId: z.string().uuid(),
+      });
+
+      const { orderId } = cancelOrderParamsSchema.parse(request.params);
+
+      const userId = request.userId || "";
+
+      const cancelOrder = new CancelOrderUseCase();
+      await cancelOrder.execute({ orderId, userId });
+
+      return reply.status(204).send();
+    } catch (error: any) {
+      if (error instanceof Error) {
+        return reply.status(400).send({ message: error.message });
       }
       console.error(error);
       return reply.status(500).send({ message: "Erro interno do servidor." });

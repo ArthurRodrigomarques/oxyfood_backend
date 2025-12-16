@@ -22,4 +22,6 @@ export async function orderRoutes(app: FastifyInstance) {
   app.get("/orders/:orderId/status", orderController.getStatus);
 
   app.get("/orders/:orderId", orderController.getDetails);
+
+  app.patch("/orders/:orderId/cancel", orderController.cancel);
 }
