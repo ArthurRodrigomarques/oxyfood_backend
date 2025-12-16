@@ -7,6 +7,11 @@ interface LoginUserResponse {
   id: string;
   name: string;
   email: string;
+  restaurants: {
+    id: string;
+    name: string;
+    slug: string;
+  }[];
 }
 
 type LoginUserRequest = z.infer<typeof loginUserBodySchema>;
@@ -18,6 +23,15 @@ export class LoginUserUseCase {
   }: LoginUserRequest): Promise<LoginUserResponse> {
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        restaurants: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -34,6 +48,7 @@ export class LoginUserUseCase {
       id: user.id,
       name: user.name,
       email: user.email,
+      restaurants: user.restaurants,
     };
   }
 }

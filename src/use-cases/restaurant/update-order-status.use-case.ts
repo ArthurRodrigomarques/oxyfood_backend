@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma.js";
 import { Order, OrderStatus } from "@prisma/client";
+import { io } from "@/lib/socket.js";
 
 interface UpdateOrderStatusRequest {
   orderId: string;
@@ -38,6 +39,9 @@ export class UpdateOrderStatusUseCase {
         status: status,
       },
     });
+    if (io) {
+      io.to(orderId).emit("order-updated", updatedOrder);
+    }
 
     return updatedOrder;
   }

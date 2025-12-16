@@ -14,6 +14,8 @@ const OrderItemSchema = z.object({
 export const createOrderBodySchema = z.object({
   customerName: z.string().min(3, { message: "O nome é obrigatório." }),
   customerPhone: z.string().min(9, { message: "Telefone inválido." }),
+  customerLatitude: z.number().min(-90).max(90).optional(),
+  customerLongitude: z.number().min(-180).max(180).optional(),
   customerAddress: z.string().min(10, { message: "Morada inválida." }),
   paymentMethod: z.enum(["Dinheiro", "Pix", "Cartao", "CartaoOnline"], {
     message: "Método de pagamento inválido.",

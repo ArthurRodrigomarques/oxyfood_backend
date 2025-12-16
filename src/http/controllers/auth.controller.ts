@@ -65,6 +65,12 @@ export class AuthController {
       return reply.status(200).send({
         message: "Login bem-sucedido!",
         token: token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          restaurants: user.restaurants,
+        },
       });
     } catch (error: any) {
       if (error instanceof Error) {
