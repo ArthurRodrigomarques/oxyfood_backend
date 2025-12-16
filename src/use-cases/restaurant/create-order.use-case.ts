@@ -8,6 +8,7 @@ import {
   generatePixPayment,
   createCheckoutPreference,
 } from "@/lib/mercado-pago.js";
+import { getDistanceFromLatLonInKm } from "@/lib/geo.js";
 
 type CreateOrderRequest = z.infer<typeof createOrderBodySchema> & {
   restaurantId: string;
@@ -19,6 +20,8 @@ export class CreateOrderUseCase {
     customerName,
     customerPhone,
     customerAddress,
+    customerLatitude,
+    customerLongitude,
     paymentMethod,
     trocoPara,
     items,
@@ -30,6 +33,26 @@ export class CreateOrderUseCase {
 
     if (!restaurant) {
       throw new Error("Restaurante não encontrado.");
+    }
+
+    if (
+      customerLatitude &&
+      customerLongitude &&
+      restaurant.latitude &&
+      restaurant.longitude
+    ) {
+      const distance = getDistanceFromLatLonInKm(
+        Number(restaurant.latitude),
+        Number(restaurant.longitude),
+        customerLatitude,
+        customerLongitude
+      );
+
+      if (distance > restaurant.maxDeliveryDistanceKm) {
+        throw new Error(
+          `Endereço fora da área de entrega. Máximo: ${restaurant.maxDeliveryDistanceKm}km.`
+        );
+      }
     }
 
     const now = new Date();
@@ -143,6 +166,8 @@ export class CreateOrderUseCase {
         customerName,
         customerPhone,
         customerAddress,
+        customerLatitude,
+        customerLongitude,
         paymentMethod: paymentMethodLabel,
         trocoPara,
         subTotalPrice,
