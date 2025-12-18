@@ -18,7 +18,9 @@ export class AuthController {
       const { name, email, password } = registerUserBodySchema.parse(
         request.body
       );
+
       const password_hash = await hash(password, 6);
+
       const registerUseCase = new RegisterUserUseCase();
 
       const user = await registerUseCase.execute({
@@ -32,6 +34,7 @@ export class AuthController {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
           createdAt: user.createdAt,
         },
       });
@@ -54,6 +57,7 @@ export class AuthController {
         {
           name: user.name,
           email: user.email,
+          role: user.role,
         },
         process.env.JWT_SECRET!,
         {
@@ -69,6 +73,7 @@ export class AuthController {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
           restaurants: user.restaurants,
         },
       });
@@ -86,7 +91,6 @@ export class AuthController {
       const { email } = forgotPasswordBodySchema.parse(request.body);
       const sendForgot = new SendForgotPasswordUseCase();
       await sendForgot.execute({ email });
-
       return reply.status(204).send();
     } catch (error: any) {
       console.error(error);
@@ -99,10 +103,8 @@ export class AuthController {
       const { token, newPassword } = resetPasswordBodySchema.parse(
         request.body
       );
-
       const resetPasswordUseCase = new ResetPasswordUseCase();
       await resetPasswordUseCase.execute({ token, newPassword });
-
       return reply.status(200).send({ message: "Senha alterada com sucesso." });
     } catch (error: any) {
       if (error instanceof Error) {
