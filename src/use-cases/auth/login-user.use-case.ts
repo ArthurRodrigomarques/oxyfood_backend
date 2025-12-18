@@ -7,6 +7,7 @@ interface LoginUserResponse {
   id: string;
   name: string;
   email: string;
+  role: string;
   restaurants: {
     id: string;
     name: string;
@@ -48,6 +49,7 @@ export class LoginUserUseCase {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
       restaurants: user.restaurants,
     };
   }

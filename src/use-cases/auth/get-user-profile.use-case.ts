@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma.js";
 interface GetUserProfileRequest {
   userId: string;
 }
+
 interface GetUserProfileResponse {
   user: {
     id: string;
     name: string;
     email: string;
+    role: string;
     createdAt: Date;
     restaurants: {
       id: string;
@@ -45,6 +47,7 @@ export class GetUserProfileUseCase {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
         restaurants: user.restaurants,
       },

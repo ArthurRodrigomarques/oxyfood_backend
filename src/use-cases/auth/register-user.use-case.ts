@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
 import { User } from "@prisma/client";
-import { hash } from "bcrypt";
 
 interface RegisterUserRequest {
   name: string;
@@ -27,6 +26,7 @@ export class RegisterUserUseCase {
         name,
         email,
         password_hash,
+        role: "OWNER",
       },
     });
 

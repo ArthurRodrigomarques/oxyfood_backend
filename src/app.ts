@@ -13,6 +13,7 @@ import { webhookRoutes } from "./http/routes/webhook.routes.js";
 import { debugRoutes } from "./http/routes/debug.route.js";
 import { env } from "process";
 import { ZodError } from "zod";
+import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -51,6 +52,8 @@ app.register(optionGroupRoutes);
 app.register(optionRoutes);
 // pedidos
 app.register(orderRoutes);
+
+app.register(superAdminRoutes);
 
 app.register(webhookRoutes);
 
