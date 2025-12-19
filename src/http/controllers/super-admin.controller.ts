@@ -1,35 +1,38 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "@/lib/prisma.js";
+import { z } from "zod";
 
 export class SuperAdminController {
-  // 1. Dashboard com Números Globais
+  // 1. Dashboard
   async getMetrics(request: FastifyRequest, reply: FastifyReply) {
-    // Total de Restaurantes Cadastrados
     const totalRestaurants = await prisma.restaurant.count();
-
-    // Total de Pedidos na Plataforma (Todas as lojas)
     const totalOrders = await prisma.order.count();
 
-    // Faturamento Total (Soma de todos os pedidos finalizados)
+    // Soma apenas pedidos "válidos" (não rejeitados)
     const totalRevenueAgg = await prisma.order.aggregate({
       _sum: {
         totalPrice: true,
       },
       where: {
-        status: { not: "REJECTED" }, // Ignora pedidos rejeitados
+        status: { not: "REJECTED" },
       },
     });
 
-    // Lojas Ativas vs Inativas (Exemplo para SaaS)
     const activeRestaurants = await prisma.restaurant.count({
       where: { subscriptionStatus: "ACTIVE" },
     });
+
+    const totalRevenue = Number(totalRevenueAgg._sum.totalPrice || 0);
+
+    // Cálculo real do Ticket Médio Global
+    const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return reply.send({
       totalRestaurants,
       activeRestaurants,
       totalOrders,
-      totalRevenue: totalRevenueAgg._sum.totalPrice || 0,
+      totalRevenue,
+      averageTicket,
     });
   }
 
@@ -42,6 +45,7 @@ export class SuperAdminController {
         slug: true,
         createdAt: true,
         subscriptionStatus: true,
+        isOpen: true,
         user: {
           select: {
             name: true,
@@ -60,5 +64,34 @@ export class SuperAdminController {
     });
 
     return reply.send({ restaurants });
+  }
+
+  // 3. Alternar Status da Assinatura (Bloquear/Ativar Loja)
+  async toggleSubscription(request: FastifyRequest, reply: FastifyReply) {
+    const toggleSchema = z.object({
+      restaurantId: z.string().uuid(),
+    });
+
+    const { restaurantId } = toggleSchema.parse(request.params);
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+    });
+
+    if (!restaurant) {
+      return reply.status(404).send({ message: "Loja não encontrada." });
+    }
+    const newStatus =
+      restaurant.subscriptionStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+
+    await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: {
+        subscriptionStatus: newStatus,
+        isOpen: newStatus === "ACTIVE" ? restaurant.isOpen : false,
+      },
+    });
+
+    return reply.status(204).send();
   }
 }

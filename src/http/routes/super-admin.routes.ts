@@ -11,4 +11,9 @@ export async function superAdminRoutes(app: FastifyInstance) {
 
   app.get("/admin/metrics", superAdminController.getMetrics);
   app.get("/admin/restaurants", superAdminController.listRestaurants);
+
+  app.patch(
+    "/admin/restaurants/:restaurantId/toggle",
+    superAdminController.toggleSubscription
+  );
 }
