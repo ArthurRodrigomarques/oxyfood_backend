@@ -14,6 +14,7 @@ import { debugRoutes } from "./http/routes/debug.route.js";
 import { env } from "process";
 import { ZodError } from "zod";
 import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
+import { reviewRoutes } from "./http/routes/review.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -54,6 +55,8 @@ app.register(optionRoutes);
 app.register(orderRoutes);
 
 app.register(superAdminRoutes);
+
+app.register(reviewRoutes);
 
 app.register(webhookRoutes);
 
