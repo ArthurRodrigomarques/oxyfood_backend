@@ -42,4 +42,10 @@ export async function restaurantRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     restaurantController.getMetrics
   );
+
+  app.post(
+    "/restaurants/:restaurantId/subscribe",
+    { onRequest: [authMiddleware] },
+    restaurantController.subscribe
+  );
 }
