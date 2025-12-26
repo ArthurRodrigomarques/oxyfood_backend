@@ -4,36 +4,68 @@ const asaasApi = axios.create({
   baseURL: process.env.ASAAS_API_URL,
   headers: {
     access_token: process.env.ASAAS_API_KEY,
+    "Content-Type": "application/json",
   },
 });
 
 export const asaasService = {
-  // 1. Criar o Cliente (Restaurante) no Asaas
-  async createCustomer(restaurant: {
+  async createCustomer(data: {
     name: string;
     email: string;
     cpfCnpj: string;
     phone: string;
+    externalId: string;
   }) {
-    const { data } = await asaasApi.post("/customers", {
-      name: restaurant.name,
-      email: restaurant.email,
-      cpfCnpj: restaurant.cpfCnpj,
-      mobilePhone: restaurant.phone,
-    });
-    return data.id;
+    try {
+      const search = await asaasApi.get("/customers", {
+        params: { cpfCnpj: data.cpfCnpj },
+      });
+
+      if (search.data.data && search.data.data.length > 0) {
+        return search.data.data[0].id;
+      }
+
+      const response = await asaasApi.post("/customers", {
+        name: data.name,
+        email: data.email,
+        cpfCnpj: data.cpfCnpj,
+        mobilePhone: data.phone,
+        externalReference: data.externalId,
+      });
+
+      return response.data.id;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas createCustomer:",
+        error.response?.data || error.message
+      );
+      throw new Error("Falha ao criar cliente no Asaas");
+    }
   },
 
-  // 2. Criar a Assinatura
-  async createSubscription(customerId: string, value: number) {
-    const { data } = await asaasApi.post("/subscriptions", {
-      customer: customerId,
-      billingType: "PIX",
-      value: value,
-      nextDueDate: new Date().toISOString().split("T")[0],
-      cycle: "MONTHLY",
-      description: "Assinatura OxyFood Pro",
-    });
-    return data;
+  // Assinatura
+  async createSubscription(
+    customerId: string,
+    value: number,
+    restaurantId: string
+  ) {
+    try {
+      const response = await asaasApi.post("/subscriptions", {
+        customer: customerId,
+        billingType: "PIX",
+        value: value,
+        nextDueDate: new Date().toISOString().split("T")[0],
+        cycle: "MONTHLY",
+        description: "Assinatura OxyFood Pro",
+        externalReference: restaurantId,
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas createSubscription:",
+        error.response?.data || error.message
+      );
+      throw new Error("Falha ao criar assinatura no Asaas");
+    }
   },
 };

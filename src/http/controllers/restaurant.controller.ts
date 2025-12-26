@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import { UpdateRestaurantUseCase } from "@/use-cases/restaurant/update-restaurant.use-case.js";
 import { GetRestaurantMetricsUseCase } from "@/use-cases/restaurant/get-restaurant-metrics.use-case.js";
+import { CreateSubscriptionUseCase } from "@/use-cases/restaurant/create-subscription.use-case.js";
 
 export class RestaurantController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -211,6 +212,26 @@ export class RestaurantController {
         return reply.status(400).send({ message: "Dados inválidos" });
       }
       return reply.status(400).send({ message: error.message });
+    }
+  }
+
+  async subscribe(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const paramsSchema = z.object({
+        restaurantId: z.string().uuid(),
+      });
+
+      const { restaurantId } = paramsSchema.parse(request.params);
+
+      const createSubscription = new CreateSubscriptionUseCase();
+      const result = await createSubscription.execute({ restaurantId });
+
+      return reply.status(200).send(result);
+    } catch (error: any) {
+      console.error(error);
+      return reply
+        .status(400)
+        .send({ message: error.message || "Erro ao criar assinatura" });
     }
   }
 }
