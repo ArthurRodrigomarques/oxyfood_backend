@@ -1,4 +1,4 @@
-import { email, z } from "zod";
+import { z } from "zod";
 
 export const registerUserBodySchema = z.object({
   name: z
@@ -8,6 +8,7 @@ export const registerUserBodySchema = z.object({
   password: z
     .string()
     .min(6, { message: "A senha precisa ter no mínimo 6 caracteres." }),
+  role: z.enum(["OWNER", "ADMIN", "SUPER_ADMIN"]).optional(),
 });
 
 export const loginUserBodySchema = z.object({

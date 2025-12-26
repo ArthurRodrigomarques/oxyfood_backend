@@ -217,6 +217,9 @@ export class RestaurantController {
 
   async subscribe(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const userId = request.userId;
+      if (!userId) throw new Error("Usuário não autenticado");
+
       const paramsSchema = z.object({
         restaurantId: z.string().uuid(),
       });
@@ -224,7 +227,8 @@ export class RestaurantController {
       const { restaurantId } = paramsSchema.parse(request.params);
 
       const createSubscription = new CreateSubscriptionUseCase();
-      const result = await createSubscription.execute({ restaurantId });
+
+      const result = await createSubscription.execute({ restaurantId, userId });
 
       return reply.status(200).send(result);
     } catch (error: any) {
