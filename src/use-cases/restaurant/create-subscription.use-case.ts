@@ -3,36 +3,54 @@ import { asaasService } from "@/lib/asaas.js";
 
 interface CreateSubscriptionRequest {
   restaurantId: string;
+  userId: string;
 }
 
 export class CreateSubscriptionUseCase {
-  async execute({ restaurantId }: CreateSubscriptionRequest) {
+  async execute({ restaurantId, userId }: CreateSubscriptionRequest) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
-      include: { user: true },
     });
 
-    if (!restaurant) {
-      throw new Error("Restaurante não encontrado.");
+    if (!user || !restaurant) {
+      throw new Error("Usuário ou Restaurante não encontrado.");
     }
 
-    if (!restaurant.cpfCnpj) {
-      throw new Error("Restaurante precisa de CPF/CNPJ para assinar.");
+    if (restaurant.userId !== user.id) {
+      throw new Error("Este restaurante não pertence a você.");
     }
 
-    const asaasCustomerId = await asaasService.createCustomer({
-      name: restaurant.name,
-      email: restaurant.user.email,
-      cpfCnpj: restaurant.cpfCnpj,
-      phone: restaurant.phoneNumber,
-      externalId: restaurant.id,
-    });
+    let asaasCustomerId = user.asaasCustomerId;
 
-    if (restaurant.asaasCustomerId !== asaasCustomerId) {
-      await prisma.restaurant.update({
-        where: { id: restaurant.id },
+    if (!asaasCustomerId) {
+      const docNumber = user.cpf || restaurant.cpfCnpj;
+
+      if (!docNumber) {
+        throw new Error(
+          "É necessário ter um CPF ou CNPJ cadastrado para gerar a cobrança."
+        );
+      }
+
+      asaasCustomerId = await asaasService.createCustomer({
+        name: user.name,
+        email: user.email,
+        cpfCnpj: docNumber,
+        phone: restaurant.phoneNumber,
+        externalId: user.id,
+      });
+
+      await prisma.user.update({
+        where: { id: user.id },
         data: { asaasCustomerId },
       });
+    }
+
+    if (!asaasCustomerId) {
+      throw new Error("Erro ao gerar ID do cliente no Asaas.");
     }
 
     const subscription = await asaasService.createSubscription(

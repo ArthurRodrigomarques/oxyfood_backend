@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { z } from "zod";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
@@ -7,81 +8,49 @@ import {
 } from "@/schemas/auth.schema.js";
 import { RegisterUserUseCase } from "@/use-cases/auth/register-user.use-case.js";
 import { LoginUserUseCase } from "@/use-cases/auth/login-user.use-case.js";
-import { hash } from "bcrypt";
-import jwt from "jsonwebtoken";
 import { SendForgotPasswordUseCase } from "@/use-cases/auth/send-forgot-password.use-case.js";
 import { ResetPasswordUseCase } from "@/use-cases/auth/reset-password.use-case.js";
 
 export class AuthController {
   async register(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { name, email, password } = registerUserBodySchema.parse(
-        request.body
-      );
-
-      const password_hash = await hash(password, 6);
-
+      const body = registerUserBodySchema.parse(request.body);
       const registerUseCase = new RegisterUserUseCase();
+      const { user } = await registerUseCase.execute(body);
 
-      const user = await registerUseCase.execute({
-        name,
-        email,
-        password_hash,
-      });
-
-      return reply.status(201).send({
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          createdAt: user.createdAt,
-        },
-      });
+      return reply.status(201).send({ user });
     } catch (error: any) {
-      if (error instanceof Error) {
-        return reply.status(400).send({ message: error.message });
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: "Dados inválidos", errors: error.format() });
       }
-      console.error(error);
-      return reply.status(500).send({ message: "Erro interno do servidor." });
+      return reply
+        .status(400)
+        .send({ message: error.message || "Erro ao registrar" });
     }
   }
 
   async login(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { email, password } = loginUserBodySchema.parse(request.body);
+      const body = loginUserBodySchema.parse(request.body);
       const loginUseCase = new LoginUserUseCase();
-      const user = await loginUseCase.execute({ email, password });
-
-      const token = jwt.sign(
-        {
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-        process.env.JWT_SECRET!,
-        {
-          subject: user.id,
-          expiresIn: "7d",
-        }
-      );
+      const { token, user } = await loginUseCase.execute(body);
 
       return reply.status(200).send({
-        message: "Login bem-sucedido!",
-        token: token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          restaurants: user.restaurants,
-        },
+        message: "Login realizado com sucesso!",
+        token,
+        user,
       });
     } catch (error: any) {
-      if (error instanceof Error) {
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: "Dados inválidos.", errors: error.format() });
+      }
+      if (error.message === "Credenciais inválidas.") {
         return reply.status(401).send({ message: error.message });
       }
-      console.error(error);
       return reply.status(500).send({ message: "Erro interno do servidor." });
     }
   }
@@ -93,7 +62,6 @@ export class AuthController {
       await sendForgot.execute({ email });
       return reply.status(204).send();
     } catch (error: any) {
-      console.error(error);
       return reply.status(204).send();
     }
   }
@@ -107,6 +75,11 @@ export class AuthController {
       await resetPasswordUseCase.execute({ token, newPassword });
       return reply.status(200).send({ message: "Senha alterada com sucesso." });
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: "Dados inválidos.", errors: error.format() });
+      }
       if (error instanceof Error) {
         return reply.status(400).send({ message: error.message });
       }

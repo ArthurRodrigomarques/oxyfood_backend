@@ -35,6 +35,12 @@ export class CreateOrderUseCase {
       throw new Error("Restaurante não encontrado.");
     }
 
+    if (restaurant.subscriptionStatus !== "ACTIVE") {
+      throw new Error(
+        "Este restaurante não está aceitando pedidos no momento (Assinatura Inativa)."
+      );
+    }
+
     if (
       customerLatitude &&
       customerLongitude &&

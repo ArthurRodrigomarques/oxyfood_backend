@@ -25,7 +25,7 @@ declare module "fastify" {
 export const app = fastify();
 
 app.register(cors, {
-  origin: "*",
+  origin: process.env.FRONTEND_URL || "*",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });

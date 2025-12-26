@@ -15,8 +15,16 @@ export class HandleAsaasWebhookUseCase {
   async execute(eventData: AsaasWebhookEvent) {
     const { event, payment } = eventData;
 
+    console.log(
+      `[Webhook] Processando evento: ${event} | Ref: ${payment.externalReference}`
+    );
+
     const relevantEvents = ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"];
     const disableEvents = ["PAYMENT_OVERDUE", "SUBSCRIPTION_DELETED"];
+
+    if (!relevantEvents.includes(event) && !disableEvents.includes(event)) {
+      return;
+    }
 
     let restaurant = null;
 
@@ -26,23 +34,30 @@ export class HandleAsaasWebhookUseCase {
       });
     }
 
-    if (!restaurant) {
-      restaurant = await prisma.restaurant.findFirst({
+    if (!restaurant && payment.customer) {
+      console.log(
+        "[Webhook] Buscando restaurante através do Dono (asaasCustomerId)..."
+      );
+
+      const user = await prisma.user.findFirst({
         where: { asaasCustomerId: payment.customer },
+        include: { restaurants: true },
       });
+
+      if (user && user.restaurants.length > 0) {
+        restaurant = user.restaurants[0];
+      }
     }
 
     if (!restaurant) {
-      console.log(
-        `[Asaas] Restaurante não encontrado para pagamento ${payment.id}`
+      console.error(
+        `❌ [Asaas] Restaurante não encontrado para o customer ${payment.customer} ou ref ${payment.externalReference}`
       );
       return;
     }
 
     if (relevantEvents.includes(event)) {
-      console.log(
-        `[Asaas] Pagamento confirmado. Ativando restaurante: ${restaurant.name}`
-      );
+      console.log(`✅ [Asaas] Pagamento OK. Ativando loja: ${restaurant.name}`);
 
       await prisma.restaurant.update({
         where: { id: restaurant.id },
@@ -50,7 +65,7 @@ export class HandleAsaasWebhookUseCase {
       });
     } else if (disableEvents.includes(event)) {
       console.log(
-        `[Asaas] Pagamento falhou. Desativando restaurante: ${restaurant.name}`
+        `⛔ [Asaas] Pagamento pendente/falhou. Bloqueando loja: ${restaurant.name}`
       );
 
       await prisma.restaurant.update({
