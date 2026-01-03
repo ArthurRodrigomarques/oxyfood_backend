@@ -32,7 +32,6 @@ app.register(cors, {
 
 app.decorateRequest("userId", null);
 
-// Rota de hello world
 app.get("/", () => {
   return { message: "Oxyfood API Rodando" };
 });
@@ -72,7 +71,6 @@ app.setErrorHandler((error, _, reply) => {
   if (env.NODE_ENV !== "production") {
     console.error(error);
   } else {
-    // TODO: Log to external tool
   }
 
   return reply.status(500).send({ message: "Internal server error." });
