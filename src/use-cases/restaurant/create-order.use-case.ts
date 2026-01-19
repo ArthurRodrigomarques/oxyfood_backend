@@ -14,7 +14,7 @@ type CreateOrderRequest = z.infer<typeof createOrderBodySchema> & {
   restaurantId: string;
 };
 
-const OXYFOOD_FEE_PERCENTAGE = 0.05; // 5%
+const OXYFOOD_FEE_PERCENTAGE = 0.05;
 
 export class CreateOrderUseCase {
   async execute({
