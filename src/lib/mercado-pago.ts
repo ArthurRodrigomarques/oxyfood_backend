@@ -7,6 +7,7 @@ interface CommonParams {
   restaurantAccessToken: string;
   orderId: string;
   restaurantId?: string;
+  applicationFee?: number;
 }
 
 interface GeneratePixParams extends CommonParams {
@@ -35,6 +36,7 @@ export async function generatePixPayment({
   restaurantAccessToken,
   orderId,
   restaurantId,
+  applicationFee,
 }: GeneratePixParams) {
   const payment = new Payment(getClient(restaurantAccessToken));
 
@@ -46,22 +48,28 @@ export async function generatePixPayment({
   const safeDescription = description?.trim() || `Pedido ${orderId}`;
   const uniqueEmail = payerEmail || `cliente_${Date.now()}@oxyfood.test`;
 
+  // Monta o body base
+  const body: any = {
+    transaction_amount: Number(transactionAmount.toFixed(2)),
+    description: safeDescription.substring(0, 100),
+    payment_method_id: "pix",
+    payer: {
+      email: uniqueEmail,
+      first_name: payerFirstName || "Cliente",
+    },
+    notification_url: notificationUrl,
+    metadata: {
+      order_id: orderId,
+    },
+  };
+
+  // Se houver taxa, adiciona ao payload
+  if (applicationFee && applicationFee > 0) {
+    body.application_fee = Number(applicationFee.toFixed(2));
+  }
+
   try {
-    const response = await payment.create({
-      body: {
-        transaction_amount: Number(transactionAmount.toFixed(2)),
-        description: safeDescription.substring(0, 100),
-        payment_method_id: "pix",
-        payer: {
-          email: uniqueEmail,
-          first_name: payerFirstName || "Cliente",
-        },
-        notification_url: notificationUrl,
-        metadata: {
-          order_id: orderId,
-        },
-      },
-    });
+    const response = await payment.create({ body });
 
     return {
       id: response.id?.toString(),
@@ -84,6 +92,7 @@ export async function createCheckoutPreference({
   orderId,
   restaurantId,
   deliveryFee,
+  applicationFee,
 }: CreatePreferenceParams) {
   const preference = new Preference(getClient(restaurantAccessToken));
 
@@ -109,7 +118,6 @@ export async function createCheckoutPreference({
   const apiUrl = process.env.API_URL || "http://localhost:3333";
 
   const backUrl = `${frontendUrl}/orders/${orderId}`;
-
   const notificationUrl = apiUrl.includes("localhost")
     ? undefined
     : `${apiUrl}/webhooks/mercadopago?restaurantId=${restaurantId}`;
@@ -118,24 +126,29 @@ export async function createCheckoutPreference({
     Math.random() * 999
   )}@testuser.com`;
 
+  // Monta o body
+  const body: any = {
+    items: preferenceItems,
+    payer: {
+      email: uniqueEmail,
+    },
+    back_urls: {
+      success: backUrl,
+      failure: backUrl,
+      pending: backUrl,
+    },
+    external_reference: orderId,
+    statement_descriptor: "OXYFOOD",
+    notification_url: notificationUrl,
+    binary_mode: false,
+  };
+
+  if (applicationFee && applicationFee > 0) {
+    body.marketplace_fee = Number(applicationFee.toFixed(2));
+  }
+
   try {
-    const response = await preference.create({
-      body: {
-        items: preferenceItems,
-        payer: {
-          email: uniqueEmail,
-        },
-        back_urls: {
-          success: backUrl,
-          failure: backUrl,
-          pending: backUrl,
-        },
-        external_reference: orderId,
-        statement_descriptor: "OXYFOOD",
-        notification_url: notificationUrl,
-        binary_mode: false,
-      },
-    });
+    const response = await preference.create({ body });
 
     if (!response.init_point) {
       throw new Error("Link não gerado pelo Mercado Pago.");
