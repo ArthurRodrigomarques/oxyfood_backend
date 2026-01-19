@@ -51,6 +51,7 @@ model Restaurant {
   orders                 Order[]
   openingHours           OpeningHour[]
   reviews                Review[]
+  coupons        Coupon[]
   @@map("restaurants")
 }
 
@@ -137,8 +138,12 @@ model Order {
   paymentStatus     PaymentStatus @default(PENDING) @map("payment_status")
   mercadoPagoId     String?       @map("mp_id")
   paymentLink       String?       @map("payment_link")
+  couponId          String?       @map("coupon_id")
+  discountPrice     Decimal       @default(0.00) @map("discount_price") @db.Decimal(10, 2)
   orderItems        OrderItem[]
 
+  @@index([restaurantId, status]) 
+  @@index([createdAt])          
   @@map("orders")
 }
 
@@ -167,6 +172,29 @@ model Review {
   @@map("reviews")
 }
 
+model Coupon {
+  id            String     @id @default(uuid())
+  code          String
+  description   String?
+  discountValue Decimal    @map("discount_value") @db.Decimal(10, 2)
+  discountType  DiscountType @default(PERCENTAGE) @map("discount_type")
+  minOrderValue Decimal?   @map("min_order_value") @db.Decimal(10, 2)
+  maxDiscount   Decimal?   @map("max_discount") @db.Decimal(10, 2)
+  active        Boolean    @default(true)
+  expiresAt     DateTime?  @map("expires_at")
+  usageLimit    Int?       @map("usage_limit") 
+  usedCount     Int        @default(0) @map("used_count")
+  
+  restaurantId  String     @map("restaurant_id")
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  @@unique([restaurantId, code]) 
+  @@map("coupons")
+}
+
 enum OptionGroupType {
   SINGLE
   MULTIPLE
@@ -175,9 +203,11 @@ enum OptionGroupType {
 enum OrderStatus {
   PENDING
   PREPARING
+  READY
   OUT
   COMPLETED
   REJECTED
+  CANCELED
 }
 
 enum PaymentStatus {
@@ -190,6 +220,11 @@ enum PaymentStatus {
 enum UserRole {
   OWNER   
   SUPER_ADMIN  
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
 }
 model PasswordResetToken {
   id        String   @id @default(uuid())

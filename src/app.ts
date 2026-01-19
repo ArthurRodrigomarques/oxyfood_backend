@@ -1,5 +1,8 @@
-import fastify from "fastify";
+import fastify, { FastifyError } from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
+import { env } from "process";
+import { ZodError } from "zod";
 
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
@@ -11,8 +14,6 @@ import { optionRoutes } from "./http/routes/option.route.js";
 import { orderRoutes } from "./http/routes/order.routes.js";
 import { webhookRoutes } from "./http/routes/webhook.routes.js";
 import { debugRoutes } from "./http/routes/debug.route.js";
-import { env } from "process";
-import { ZodError } from "zod";
 import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
 
@@ -22,19 +23,45 @@ declare module "fastify" {
   }
 }
 
-export const app = fastify();
+export const app = fastify({
+  logger: {
+    transport: {
+      target: "pino-pretty",
+      options: {
+        translateTime: "HH:MM:ss Z",
+        ignore: "pid,hostname",
+        colorize: true,
+      },
+    },
+  },
+});
+
+app.register(rateLimit, {
+  max: 100,
+  timeWindow: "1 minute",
+});
 
 app.register(cors, {
-  origin: process.env.FRONTEND_URL || "*",
+  origin: (origin, cb) => {
+    const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:3000";
+    if (!origin || origin === allowedOrigin) {
+      cb(null, true);
+      return;
+    }
+    if (process.env.NODE_ENV === "development") {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Not allowed"), false);
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });
 
 app.decorateRequest("userId", null);
 
-// Rota de hello world
 app.get("/", () => {
-  return { message: "Oxyfood API Rodando" };
+  return { message: "Oxyfood API Rodando", status: "operational" };
 });
 
 //autenticação
@@ -62,17 +89,23 @@ app.register(webhookRoutes);
 
 app.register(debugRoutes);
 
-app.setErrorHandler((error, _, reply) => {
+app.setErrorHandler((error: FastifyError, request, reply) => {
   if (error instanceof ZodError) {
     return reply
       .status(400)
       .send({ message: "Validation error.", issues: error.format() });
   }
 
-  if (env.NODE_ENV !== "production") {
-    console.error(error);
+  if (error.statusCode === 429) {
+    return reply
+      .status(429)
+      .send({ message: "Muitas requisições. Tente novamente mais tarde." });
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    request.log.error(error);
   } else {
-    // TODO: Log to external tool
+    request.log.error(error);
   }
 
   return reply.status(500).send({ message: "Internal server error." });
