@@ -4,10 +4,11 @@ import { asaasService } from "@/lib/asaas.js";
 interface CreateSubscriptionRequest {
   restaurantId: string;
   userId: string;
+  plan: "START" | "PRO" | "ENTERPRISE";
 }
 
 export class CreateSubscriptionUseCase {
-  async execute({ restaurantId, userId }: CreateSubscriptionRequest) {
+  async execute({ restaurantId, userId, plan }: CreateSubscriptionRequest) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -22,6 +23,22 @@ export class CreateSubscriptionUseCase {
 
     if (restaurant.userId !== user.id) {
       throw new Error("Este restaurante não pertence a você.");
+    }
+
+    // DEFINIÇÃO DE PREÇOS
+    let price = 0;
+    switch (plan) {
+      case "START":
+        price = 59.9;
+        break;
+      case "PRO":
+        price = 119.9;
+        break;
+      case "ENTERPRISE":
+        price = 299.9;
+        break;
+      default:
+        throw new Error("Plano inválido.");
     }
 
     let asaasCustomerId = user.asaasCustomerId;
@@ -55,7 +72,7 @@ export class CreateSubscriptionUseCase {
 
     const subscription = await asaasService.createSubscription(
       asaasCustomerId,
-      99.9,
+      price,
       restaurant.id
     );
 

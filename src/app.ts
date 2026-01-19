@@ -16,6 +16,7 @@ import { webhookRoutes } from "./http/routes/webhook.routes.js";
 import { debugRoutes } from "./http/routes/debug.route.js";
 import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
+import { subscriptionRoutes } from "./http/routes/subscription.route.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -88,6 +89,8 @@ app.register(reviewRoutes);
 app.register(webhookRoutes);
 
 app.register(debugRoutes);
+
+app.register(subscriptionRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
   if (error instanceof ZodError) {
