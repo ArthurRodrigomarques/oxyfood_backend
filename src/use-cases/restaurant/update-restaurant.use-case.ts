@@ -8,6 +8,7 @@ interface UpdateRestaurantRequest {
   description?: string;
   addressText?: string;
   phoneNumber?: string;
+  cpfCnpj?: string | null;
   deliveryFee?: number;
   freeDeliveryAbove?: number | null;
   deliveryTimeMin?: number;

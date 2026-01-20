@@ -27,6 +27,7 @@ export const updateRestaurantBodySchema = z.object({
   longitude: z.number().min(-180).max(180).optional(),
   maxDeliveryDistanceKm: z.number().positive().optional(),
   phoneNumber: z.string().min(9).optional(),
+  cpfCnpj: z.string().optional(),
   deliveryFee: z.number().nonnegative().optional(),
   freeDeliveryAbove: z.number().positive().optional().or(z.null()),
   deliveryTimeMin: z.number().min(1).optional(),
