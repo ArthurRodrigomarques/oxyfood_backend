@@ -43,6 +43,8 @@ model Restaurant {
   freeDeliveryAbove      Decimal?      @db.Decimal(10, 2) @map("free_delivery_above")
   deliveryTimeMin        Int           @default(30) @map("delivery_time_min")
   deliveryTimeMax        Int           @default(45) @map("delivery_time_max")
+  plan        PlanType @default(START)
+  planExpiresAt DateTime?
   createdAt              DateTime      @default(now()) @map("created_at")
   updatedAt              DateTime      @updatedAt @map("updated_at")
   userId                 String        @map("user_id")
@@ -226,6 +228,13 @@ enum DiscountType {
   PERCENTAGE
   FIXED
 }
+
+enum PlanType {
+  START
+  PRO
+  ENTERPRISE
+}
+
 model PasswordResetToken {
   id        String   @id @default(uuid())
   email     String

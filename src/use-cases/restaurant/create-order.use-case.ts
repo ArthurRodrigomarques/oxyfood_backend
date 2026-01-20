@@ -14,6 +14,8 @@ type CreateOrderRequest = z.infer<typeof createOrderBodySchema> & {
   restaurantId: string;
 };
 
+const OXYFOOD_FEE_PERCENTAGE = 0.05;
+
 export class CreateOrderUseCase {
   async execute({
     restaurantId,
@@ -164,6 +166,8 @@ export class CreateOrderUseCase {
     const deliveryFee = restaurant.deliveryFee;
     const totalPrice = subTotalPrice.add(deliveryFee);
 
+    const applicationFee = totalPrice.mul(OXYFOOD_FEE_PERCENTAGE).toNumber();
+
     const paymentMethodLabel =
       paymentMethod === "CartaoOnline" ? "Cartão (Online)" : paymentMethod;
 
@@ -210,6 +214,7 @@ export class CreateOrderUseCase {
             restaurantAccessToken: tokenToUse,
             orderId: order.id,
             restaurantId: restaurant.id,
+            applicationFee: applicationFee,
           });
 
           await prisma.order.update({
@@ -244,6 +249,7 @@ export class CreateOrderUseCase {
             restaurantAccessToken: tokenToUse,
             orderId: order.id,
             restaurantId: restaurant.id,
+            applicationFee: applicationFee,
           });
 
           await prisma.order.update({

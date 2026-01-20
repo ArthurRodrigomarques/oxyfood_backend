@@ -13,7 +13,7 @@ function generateSlug(text: string): string {
     .replace(/\s+/g, "-");
 }
 
-type CreateRestaurantResquest = z.infer<typeof createRestaurantBodySchema> & {
+type CreateRestaurantRequest = z.infer<typeof createRestaurantBodySchema> & {
   userId: string;
 };
 
@@ -27,8 +27,20 @@ export class CreateRestaurantUseCase {
     logoUrl,
     deliveryFee,
     freeDeliveryAbove,
-  }: CreateRestaurantResquest): Promise<Restaurant> {
-    const slug = generateSlug(name);
+  }: CreateRestaurantRequest): Promise<Restaurant> {
+    let slug = generateSlug(name);
+
+    const slugExists = await prisma.restaurant.findUnique({
+      where: { slug },
+    });
+
+    if (slugExists) {
+      slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+    }
+
+    const now = new Date();
+    const trialExpirationDate = new Date(now);
+    trialExpirationDate.setDate(now.getDate() + 15);
 
     const restaurant = await prisma.restaurant.create({
       data: {
@@ -41,6 +53,11 @@ export class CreateRestaurantUseCase {
         deliveryFee: deliveryFee || 0,
         freeDeliveryAbove: freeDeliveryAbove || null,
         userId: userId,
+        //  Configuração do Período de Teste
+        subscriptionStatus: "ACTIVE",
+        plan: "PRO",
+        planExpiresAt: trialExpirationDate,
+        isOpen: false,
       },
     });
 

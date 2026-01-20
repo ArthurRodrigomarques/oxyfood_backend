@@ -17,6 +17,7 @@ import { z } from "zod";
 import { UpdateRestaurantUseCase } from "@/use-cases/restaurant/update-restaurant.use-case.js";
 import { GetRestaurantMetricsUseCase } from "@/use-cases/restaurant/get-restaurant-metrics.use-case.js";
 import { CreateSubscriptionUseCase } from "@/use-cases/restaurant/create-subscription.use-case.js";
+import { GetRestaurantByIdUseCase } from "@/use-cases/restaurant/get-restaurant-by-id.use-case.js";
 
 export class RestaurantController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -60,20 +61,20 @@ export class RestaurantController {
     try {
       const userId = request.userId!;
       const { restaurantId } = updateRestaurantParamsSchema.parse(
-        request.params
+        request.params,
       );
 
       console.log("\n--- 📥 DEBUG UPDATE CONTROLLER ---");
       console.log(
         "Recebido Payload (Body):",
-        JSON.stringify(request.body, null, 2)
+        JSON.stringify(request.body, null, 2),
       );
 
       const body = updateRestaurantBodySchema.parse(request.body);
 
       console.log(
         "Token MP no Body Validado:",
-        body.mercadoPagoAccessToken ? "✅ PRESENTE" : "❌ AUSENTE"
+        body.mercadoPagoAccessToken ? "✅ PRESENTE" : "❌ AUSENTE",
       );
 
       const updateRestaurant = new UpdateRestaurantUseCase();
@@ -85,7 +86,7 @@ export class RestaurantController {
 
       console.log(
         "Update Concluído. Token salvo no DB:",
-        restaurant.mercadoPagoAccessToken ? "✅ SIM" : "❌ NÃO"
+        restaurant.mercadoPagoAccessToken ? "✅ SIM" : "❌ NÃO",
       );
       console.log("----------------------------------\n");
 
@@ -109,7 +110,7 @@ export class RestaurantController {
       }
 
       const { restaurantId } = toggleRestaurantStatusParamsSchema.parse(
-        request.params
+        request.params,
       );
 
       const { isOpen } = toggleRestaurantStatusBodySchema.parse(request.body);
@@ -196,7 +197,7 @@ export class RestaurantController {
             dayOfWeek: z.number().min(0).max(6),
             openTime: z.string().regex(/^\d{2}:\d{2}$/),
             closeTime: z.string().regex(/^\d{2}:\d{2}$/),
-          })
+          }),
         ),
       });
 
@@ -215,6 +216,19 @@ export class RestaurantController {
     }
   }
 
+  async getById(request: FastifyRequest, reply: FastifyReply) {
+    const paramsSchema = z.object({
+      restaurantId: z.string().uuid(),
+    });
+
+    const { restaurantId } = paramsSchema.parse(request.params);
+
+    const useCase = new GetRestaurantByIdUseCase();
+    const restaurant = await useCase.execute({ restaurantId });
+
+    return reply.send(restaurant);
+  }
+
   async subscribe(request: FastifyRequest, reply: FastifyReply) {
     try {
       const userId = request.userId;
@@ -224,13 +238,22 @@ export class RestaurantController {
         restaurantId: z.string().uuid(),
       });
 
+      const bodySchema = z.object({
+        plan: z.enum(["START", "PRO", "ENTERPRISE"]),
+      });
+
       const { restaurantId } = paramsSchema.parse(request.params);
+      const { plan } = bodySchema.parse(request.body);
 
       const createSubscription = new CreateSubscriptionUseCase();
 
-      const result = await createSubscription.execute({ restaurantId, userId });
+      const result = await createSubscription.execute({
+        restaurantId,
+        userId,
+        plan,
+      });
 
-      return reply.status(200).send(result);
+      return reply.status(201).send(result);
     } catch (error: any) {
       console.error(error);
       return reply
