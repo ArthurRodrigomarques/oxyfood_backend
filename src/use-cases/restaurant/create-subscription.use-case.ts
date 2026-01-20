@@ -25,6 +25,15 @@ export class CreateSubscriptionUseCase {
       throw new Error("Este restaurante não pertence a você.");
     }
 
+    if (
+      restaurant.subscriptionStatus === "ACTIVE" &&
+      restaurant.plan === plan
+    ) {
+      throw new Error(
+        "Você já possui este plano ativo. Não é necessário pagar novamente.",
+      );
+    }
+
     let price = 0;
     switch (plan) {
       case "START":
@@ -47,7 +56,7 @@ export class CreateSubscriptionUseCase {
 
       if (!docNumber) {
         throw new Error(
-          "É necessário ter um CPF ou CNPJ cadastrado para gerar a cobrança.",
+          "É necessário ter um CPF ou CNPJ cadastrado nas configurações.",
         );
       }
 
@@ -55,7 +64,7 @@ export class CreateSubscriptionUseCase {
         name: user.name,
         email: user.email,
         cpfCnpj: docNumber,
-        phone: restaurant.phoneNumber,
+        phone: restaurant.phoneNumber || "",
         externalId: user.id,
       });
 
@@ -66,7 +75,7 @@ export class CreateSubscriptionUseCase {
     }
 
     if (!asaasCustomerId) {
-      throw new Error("Erro ao gerar ID do cliente no Asaas.");
+      throw new Error("Falha ao identificar cliente no Asaas.");
     }
 
     const subscription = await asaasService.createSubscription(
@@ -75,27 +84,24 @@ export class CreateSubscriptionUseCase {
       restaurant.id,
     );
 
-    if (subscription.status === "ACTIVE") {
-      console.log(
-        `⚡ [Subscription] Ativação imediata para ${restaurant.name}`,
-      );
+    const payments = await asaasService.getSubscriptionPayments(
+      subscription.id,
+    );
+    const firstPayment = payments && payments.length > 0 ? payments[0] : null;
 
-      await prisma.restaurant.update({
-        where: { id: restaurant.id },
-        data: {
-          subscriptionStatus: "ACTIVE",
-          plan: plan,
-        },
-      });
-    }
+    await prisma.restaurant.update({
+      where: { id: restaurant.id },
+      data: {
+        plan: plan,
+        subscriptionStatus: "PENDING",
+      },
+    });
 
     return {
       subscriptionId: subscription.id,
-      status: subscription.status,
+      status: "PENDING",
       paymentLink:
-        subscription.invoiceUrl ||
-        subscription.bankSlipUrl ||
-        subscription.paymentLink,
+        firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || null,
     };
   }
 }

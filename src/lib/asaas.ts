@@ -37,17 +37,16 @@ export const asaasService = {
     } catch (error: any) {
       console.error(
         "Erro Asaas createCustomer:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
       throw new Error("Falha ao criar cliente no Asaas");
     }
   },
 
-  // Assinatura
   async createSubscription(
     customerId: string,
     value: number,
-    restaurantId: string
+    restaurantId: string,
   ) {
     try {
       const response = await asaasApi.post("/subscriptions", {
@@ -63,9 +62,24 @@ export const asaasService = {
     } catch (error: any) {
       console.error(
         "Erro Asaas createSubscription:",
-        error.response?.data || error.message
+        error.response?.data || error.message,
       );
       throw new Error("Falha ao criar assinatura no Asaas");
+    }
+  },
+
+  async getSubscriptionPayments(subscriptionId: string) {
+    try {
+      const response = await asaasApi.get(
+        `/subscriptions/${subscriptionId}/payments`,
+      );
+      return response.data.data;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas getPayments:",
+        error.response?.data || error.message,
+      );
+      return [];
     }
   },
 };

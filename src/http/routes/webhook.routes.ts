@@ -1,15 +1,16 @@
 import { FastifyInstance } from "fastify";
-import { WebhookController } from "../controllers/webhook.controller.js";
+import { WebhookController } from "@/http/controllers/webhook.controller.js";
 
 const webhookController = new WebhookController();
 
 export async function webhookRoutes(app: FastifyInstance) {
   app.post(
     "/webhooks/mercadopago",
-    webhookController.handleMercadoPago.bind(webhookController)
+    webhookController.handleMercadoPago.bind(webhookController),
   );
+
   app.post(
     "/webhooks/asaas",
-    webhookController.handleAsaas.bind(webhookController)
+    webhookController.handleAsaas.bind(webhookController),
   );
 }

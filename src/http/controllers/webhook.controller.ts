@@ -32,6 +32,7 @@ export class WebhookController {
 
       return reply.status(200).send();
     } catch (error) {
+      console.error("Erro Webhook MP:", error);
       return reply.status(200).send();
     }
   }
@@ -39,28 +40,18 @@ export class WebhookController {
   async handleAsaas(request: FastifyRequest, reply: FastifyReply) {
     try {
       const body = request.body as any;
-      console.log("\n🔔 [WEBHOOK ASAAS RECEBIDO]");
-      console.log("Evento:", body.event);
-      console.log("Customer ID:", body.payment?.customer);
-      console.log(
-        "External Reference (ID Restaurante):",
-        body.payment?.externalReference
-      );
-      console.log("Status Pagamento:", body.payment?.status);
 
       if (!body.event || !body.payment) {
-        console.log("❌ Payload ignorado: Faltando event ou payment");
-        return reply.status(200).send({ status: "ignored" });
+        return reply.status(200).send({ status: "ignored_invalid_payload" });
       }
 
       const handleAsaas = new HandleAsaasWebhookUseCase();
       await handleAsaas.execute(body);
 
-      console.log("✅ Webhook processado sem erros.");
       return reply.status(200).send({ received: true });
     } catch (error) {
-      console.error("❌ ERRO NO CONTROLLER DO ASAAS:", error);
-      return reply.status(200).send();
+      console.error("❌ Erro Webhook Asaas:", error);
+      return reply.status(200).send({ received: false });
     }
   }
 }
