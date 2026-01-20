@@ -17,7 +17,7 @@ export class HandleAsaasWebhookUseCase {
     const { event, payment } = eventData;
 
     console.log(
-      `[Webhook] Processando evento: ${event} | Ref: ${payment.externalReference} | Valor: ${payment.value}`
+      `[Webhook] Processando evento: ${event} | Ref: ${payment.externalReference} | Valor: ${payment.value}`,
     );
 
     const relevantEvents = ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"];
@@ -37,7 +37,7 @@ export class HandleAsaasWebhookUseCase {
 
     if (!restaurant && payment.customer) {
       console.log(
-        "[Webhook] Buscando restaurante através do Dono (asaasCustomerId)..."
+        "[Webhook] Buscando restaurante através do Dono (asaasCustomerId)...",
       );
 
       const user = await prisma.user.findFirst({
@@ -52,7 +52,7 @@ export class HandleAsaasWebhookUseCase {
 
     if (!restaurant) {
       console.error(
-        `❌ [Asaas] Restaurante não encontrado para o customer ${payment.customer}`
+        `❌ [Asaas] Restaurante não encontrado para o customer ${payment.customer}`,
       );
       return;
     }
@@ -71,19 +71,23 @@ export class HandleAsaasWebhookUseCase {
       }
 
       console.log(
-        `🔄 Atualizando loja ${restaurant.name} para plano ${detectedPlan} e status ATIVO.`
+        `🔄 Atualizando loja ${restaurant.name} para plano ${detectedPlan} e status ATIVO.`,
       );
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
 
       await prisma.restaurant.update({
         where: { id: restaurant.id },
         data: {
           subscriptionStatus: "ACTIVE",
           plan: detectedPlan,
+          planExpiresAt: expiresAt,
         },
       });
     } else if (disableEvents.includes(event)) {
       console.log(
-        `⛔ [Asaas] Pagamento pendente/falhou. Bloqueando loja: ${restaurant.name}`
+        `⛔ [Asaas] Pagamento pendente/falhou. Bloqueando loja: ${restaurant.name}`,
       );
 
       await prisma.restaurant.update({
