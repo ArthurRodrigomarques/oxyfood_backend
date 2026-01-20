@@ -25,7 +25,6 @@ export class CreateSubscriptionUseCase {
       throw new Error("Este restaurante não pertence a você.");
     }
 
-    // DEFINIÇÃO DE PREÇOS
     let price = 0;
     switch (plan) {
       case "START":
@@ -48,7 +47,7 @@ export class CreateSubscriptionUseCase {
 
       if (!docNumber) {
         throw new Error(
-          "É necessário ter um CPF ou CNPJ cadastrado para gerar a cobrança."
+          "É necessário ter um CPF ou CNPJ cadastrado para gerar a cobrança.",
         );
       }
 
@@ -73,13 +72,30 @@ export class CreateSubscriptionUseCase {
     const subscription = await asaasService.createSubscription(
       asaasCustomerId,
       price,
-      restaurant.id
+      restaurant.id,
     );
+
+    if (subscription.status === "ACTIVE") {
+      console.log(
+        `⚡ [Subscription] Ativação imediata para ${restaurant.name}`,
+      );
+
+      await prisma.restaurant.update({
+        where: { id: restaurant.id },
+        data: {
+          subscriptionStatus: "ACTIVE",
+          plan: plan,
+        },
+      });
+    }
 
     return {
       subscriptionId: subscription.id,
       status: subscription.status,
-      paymentLink: subscription.invoiceUrl,
+      paymentLink:
+        subscription.invoiceUrl ||
+        subscription.bankSlipUrl ||
+        subscription.paymentLink,
     };
   }
 }
