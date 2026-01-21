@@ -5,6 +5,7 @@ export const createRestaurantBodySchema = z.object({
     .string()
     .min(3, { message: "O nome precisa ter no mínimo 3 caracteres." }),
   addressText: z.string().min(10, { message: "A morada é muito curta." }),
+  cpfCnpj: z.string().min(11, { message: "Documento inválido." }),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   maxDeliveryDistanceKm: z.number().positive().optional(),
