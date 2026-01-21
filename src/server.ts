@@ -13,6 +13,9 @@ const start = async () => {
       port: PORT,
       host: "0.0.0.0",
     });
+
+    console.log(`🚀 HTTP Server Running on port ${PORT}!`);
+    console.log(`📑 API Documentation: http://localhost:${PORT}/docs`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

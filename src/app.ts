@@ -17,6 +17,8 @@ import { debugRoutes } from "./http/routes/debug.route.js";
 import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -35,6 +37,24 @@ export const app = fastify({
       },
     },
   },
+});
+
+app.register(fastifySwagger, {
+  swagger: {
+    info: {
+      title: "Oxyfood API",
+      description: "Documentação da API do Oxyfood Delivery e Gestão",
+      version: "1.0.0",
+    },
+    host: "localhost:3333",
+    schemes: ["http", "https"],
+    consumes: ["application/json"],
+    produces: ["application/json"],
+  },
+});
+
+app.register(fastifySwaggerUi, {
+  routePrefix: "/docs",
 });
 
 app.register(rateLimit, {
