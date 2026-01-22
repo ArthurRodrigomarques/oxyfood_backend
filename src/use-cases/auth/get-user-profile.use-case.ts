@@ -15,6 +15,7 @@ interface GetUserProfileResponse {
       id: string;
       name: string;
       slug: string;
+      plan: string;
     }[];
   };
 }
@@ -33,6 +34,7 @@ export class GetUserProfileUseCase {
             id: true,
             name: true,
             slug: true,
+            plan: true,
           },
         },
       },
