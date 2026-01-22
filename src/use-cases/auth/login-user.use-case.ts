@@ -35,7 +35,7 @@ export class LoginUserUseCase {
       throw new Error("Credenciais inválidas.");
     }
 
-    // [CORREÇÃO 4] Geração do Token JWT (essencial para o login)
+    // Geração do Token JWT
     const token = jwt.sign(
       {
         sub: user.id,
@@ -45,8 +45,8 @@ export class LoginUserUseCase {
       },
       process.env.JWT_SECRET!,
       {
-        expiresIn: "7d",
-      }
+        expiresIn: "30d",
+      },
     );
 
     // Retorna o token e os dados do usuário atualizados
