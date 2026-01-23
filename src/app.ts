@@ -64,27 +64,27 @@ app.register(rateLimit, {
 
 app.register(cors, {
   origin: (origin, cb) => {
-    const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:3000";
-    if (!origin || origin === allowedOrigin) {
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "https://oxyfood-frontend-hh3z.vercel.app",
+      process.env.FRONTEND_URL,
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
       cb(null, true);
       return;
     }
+
     if (process.env.NODE_ENV === "development") {
       cb(null, true);
       return;
     }
+
     cb(new Error("Not allowed"), false);
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });
-
-app.decorateRequest("userId", null);
-
-app.get("/", () => {
-  return { message: "Oxyfood API Rodando", status: "operational" };
-});
-
 //autenticação
 app.register(authRoutes);
 // login

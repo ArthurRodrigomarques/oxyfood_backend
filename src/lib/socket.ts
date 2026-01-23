@@ -13,8 +13,13 @@ interface TokenPayload {
 export function initSocket(httpServer: HttpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      origin: [
+        "http://localhost:3000",
+        "https://oxyfood-frontend-hh3z.vercel.app",
+        process.env.FRONTEND_URL || "",
+      ].filter(Boolean),
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 
@@ -31,7 +36,7 @@ export function initSocket(httpServer: HttpServer) {
 
       const payload = jwt.verify(
         tokenValue,
-        process.env.JWT_SECRET!
+        process.env.JWT_SECRET!,
       ) as TokenPayload;
 
       socket.data.userId = payload.sub;
@@ -47,13 +52,13 @@ export function initSocket(httpServer: HttpServer) {
     console.log(
       `Conexão: ${socket.id} | Tipo: ${
         isAuth ? "Restaurante/Admin" : "Cliente Anônimo"
-      }`
+      }`,
     );
 
     socket.on("join-restaurant", (restaurantId: string) => {
       if (!socket.data.userId) {
         console.warn(
-          `Tentativa não autorizada de entrar no restaurante ${restaurantId}`
+          `Tentativa não autorizada de entrar no restaurante ${restaurantId}`,
         );
         return;
       }

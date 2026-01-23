@@ -29,6 +29,25 @@ export class CreateRestaurantUseCase {
     deliveryFee,
     freeDeliveryAbove,
   }: CreateRestaurantRequest): Promise<Restaurant> {
+    const existingRestaurants = await prisma.restaurant.findMany({
+      where: {
+        userId: userId,
+      },
+      select: { plan: true },
+    });
+
+    if (existingRestaurants.length > 0) {
+      const hasEnterprisePlan = existingRestaurants.some(
+        (r: { plan: string }) => r.plan === "ENTERPRISE",
+      );
+
+      if (!hasEnterprisePlan) {
+        throw new Error(
+          "Limite atingido! Faça upgrade para o plano ENTERPRISE para gerenciar múltiplas lojas.",
+        );
+      }
+    }
+
     let slug = generateSlug(name);
 
     const slugExists = await prisma.restaurant.findUnique({
