@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma.js";
 import { Restaurant } from "@prisma/client";
+import { isPlanExpired } from "../../utils/subscription-check.js";
 
-// O "data" que este Use Case espera
 interface ToggleRestaurantStatusRequest {
   restaurantId: string;
   isOpen: boolean;
@@ -26,6 +26,22 @@ export class ToggleRestaurantStatusUseCase {
 
     if (restaurant.userId !== userId) {
       throw new Error("Não autorizado.");
+    }
+
+    if (isOpen) {
+      if (isPlanExpired(restaurant)) {
+        await prisma.restaurant.update({
+          where: { id: restaurantId },
+          data: {
+            subscriptionStatus: "INACTIVE",
+            isOpen: false,
+          },
+        });
+
+        throw new Error(
+          "Sua assinatura expirou. Renove seu plano para abrir a loja.",
+        );
+      }
     }
 
     const updatedRestaurant = await prisma.restaurant.update({

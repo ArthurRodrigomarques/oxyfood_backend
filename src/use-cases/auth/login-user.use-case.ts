@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
-import { compare } from "bcrypt"; // [CORREÇÃO 1] Usando 'bcrypt' que está no seu package.json
+import { compare } from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { loginUserBodySchema } from "@/schemas/auth.schema.js";
@@ -8,7 +8,6 @@ type LoginUserRequest = z.infer<typeof loginUserBodySchema>;
 
 export class LoginUserUseCase {
   async execute({ email, password }: LoginUserRequest) {
-    // 1. Busca o usuário trazendo os restaurantes com os campos NOVOS
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -28,7 +27,7 @@ export class LoginUserUseCase {
       throw new Error("Credenciais inválidas.");
     }
 
-    // Compara a senha (usando bcrypt nativo)
+    // Compara a senha (usando bcrypt)
     const doesPasswordMatch = await compare(password, user.password_hash);
 
     if (!doesPasswordMatch) {
