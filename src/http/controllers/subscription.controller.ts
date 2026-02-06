@@ -4,7 +4,7 @@ import { CreateSubscriptionUseCase } from "@/use-cases/restaurant/create-subscri
 
 export async function createSubscription(
   request: FastifyRequest,
-  reply: FastifyReply
+  reply: FastifyReply,
 ) {
   const bodySchema = z.object({
     restaurantId: z.string().uuid(),
