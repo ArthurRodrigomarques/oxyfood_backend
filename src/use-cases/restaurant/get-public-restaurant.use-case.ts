@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
+import { isRestaurantOpen } from "@/lib/utils.js";
 
 interface GetPublicRestaurantRequest {
   slug: string;
@@ -38,7 +39,13 @@ export class GetPublicRestaurantUseCase {
     if (!restaurant) {
       throw new Error("Restaurante não encontrado.");
     }
+    const isOpenCalculated = isRestaurantOpen(restaurant.openingHours);
 
-    return { restaurant };
+    return {
+      restaurant: {
+        ...restaurant,
+        isOpen: isOpenCalculated,
+      },
+    };
   }
 }

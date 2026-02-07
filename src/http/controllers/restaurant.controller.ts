@@ -240,10 +240,11 @@ export class RestaurantController {
 
       const bodySchema = z.object({
         plan: z.enum(["START", "PRO", "ENTERPRISE"]),
+        billingCycle: z.enum(["MONTHLY", "YEARLY"]),
       });
 
       const { restaurantId } = paramsSchema.parse(request.params);
-      const { plan } = bodySchema.parse(request.body);
+      const { plan, billingCycle } = bodySchema.parse(request.body);
 
       const createSubscription = new CreateSubscriptionUseCase();
 
@@ -251,6 +252,7 @@ export class RestaurantController {
         restaurantId,
         userId,
         plan,
+        billingCycle,
       });
 
       return reply.status(201).send(result);

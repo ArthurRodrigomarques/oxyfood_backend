@@ -43,12 +43,11 @@ export const asaasService = {
     }
   },
 
-  // AQUI ESTAVA O ERRO: Agora aceitamos o 4º argumento 'cycle'
   async createSubscription(
     customerId: string,
     value: number,
     restaurantId: string,
-    cycle: "MONTHLY" | "YEARLY", // <--- Adicionado
+    cycle: "MONTHLY" | "YEARLY",
   ) {
     try {
       const response = await asaasApi.post("/subscriptions", {
@@ -56,7 +55,7 @@ export const asaasService = {
         billingType: "PIX",
         value: value,
         nextDueDate: new Date().toISOString().split("T")[0],
-        cycle: cycle, // <--- Usamos a variável aqui
+        cycle: cycle,
         description: `Assinatura OxyFood ${cycle === "MONTHLY" ? "Mensal" : "Anual"}`,
         externalReference: restaurantId,
       });
@@ -82,6 +81,19 @@ export const asaasService = {
         error.response?.data || error.message,
       );
       return [];
+    }
+  },
+
+  async getSubscription(subscriptionId: string) {
+    try {
+      const response = await asaasApi.get(`/subscriptions/${subscriptionId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas getSubscription:",
+        error.response?.data || error.message,
+      );
+      throw new Error("Falha ao buscar assinatura");
     }
   },
 };

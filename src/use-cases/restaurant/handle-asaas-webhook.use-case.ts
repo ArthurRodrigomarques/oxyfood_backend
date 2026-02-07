@@ -1,99 +1,107 @@
 import { prisma } from "@/lib/prisma.js";
+import { asaasService } from "@/lib/asaas.js";
 
-interface AsaasWebhookEvent {
+interface HandleAsaasWebhookRequest {
   event: string;
   payment: {
     id: string;
     customer: string;
     subscription?: string;
-    status: string;
+    installment?: string;
     externalReference?: string;
+    status: string;
+    billingType: string;
     value: number;
+    netValue: number;
+    description?: string;
+    creditDate?: string;
+    confirmedDate?: string;
   };
 }
 
 export class HandleAsaasWebhookUseCase {
-  async execute(eventData: AsaasWebhookEvent) {
-    const { event, payment } = eventData;
-
+  async execute({ event, payment }: HandleAsaasWebhookRequest) {
     console.log(
-      `[Webhook] Processando evento: ${event} | Ref: ${payment.externalReference} | Valor: ${payment.value}`,
+      `[Webhook] Processando evento: ${event} para pagamento ${payment.id}`,
     );
 
-    const relevantEvents = ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"];
-    const disableEvents = ["PAYMENT_OVERDUE", "SUBSCRIPTION_DELETED"];
-
-    if (!relevantEvents.includes(event) && !disableEvents.includes(event)) {
+    if (!payment.subscription) {
+      console.log("[Webhook] Ignorando evento não relacionado a assinatura.");
       return;
     }
 
-    let restaurant = null;
+    const subscriptionId = payment.subscription;
 
-    if (payment.externalReference) {
-      restaurant = await prisma.restaurant.findUnique({
-        where: { id: payment.externalReference },
-      });
-    }
-
-    if (!restaurant && payment.customer) {
-      console.log(
-        "[Webhook] Buscando restaurante através do Dono (asaasCustomerId)...",
+    let subscriptionDetails;
+    try {
+      subscriptionDetails = await asaasService.getSubscription(subscriptionId);
+    } catch (error) {
+      console.error(
+        `[Webhook] Erro ao buscar assinatura ${subscriptionId}:`,
+        error,
       );
-
-      const user = await prisma.user.findFirst({
-        where: { asaasCustomerId: payment.customer },
-        include: { restaurants: true },
-      });
-
-      if (user && user.restaurants.length > 0) {
-        restaurant = user.restaurants[0];
-      }
+      return;
     }
+
+    const restaurantId = subscriptionDetails.externalReference;
+
+    if (!restaurantId) {
+      console.error(
+        "[Webhook] Assinatura sem externalReference (ID do restaurante).",
+      );
+      return;
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+    });
 
     if (!restaurant) {
-      console.error(
-        `❌ [Asaas] Restaurante não encontrado para o customer ${payment.customer}`,
-      );
+      console.error(`[Webhook] Restaurante ${restaurantId} não encontrado.`);
       return;
     }
 
-    if (relevantEvents.includes(event)) {
-      console.log(`✅ [Asaas] Pagamento de R$ ${payment.value} confirmado.`);
+    if (
+      event === "PAYMENT_CONFIRMED" ||
+      event === "PAYMENT_RECEIVED" ||
+      event === "PAYMENT_CREDITED"
+    ) {
+      const now = new Date();
 
-      let detectedPlan: "START" | "PRO" | "ENTERPRISE" = "START";
+      let baseDate =
+        restaurant.planExpiresAt && restaurant.planExpiresAt > now
+          ? new Date(restaurant.planExpiresAt)
+          : now;
 
-      if (payment.value >= 290) {
-        detectedPlan = "ENTERPRISE";
-      } else if (payment.value >= 110) {
-        detectedPlan = "PRO";
-      } else if (payment.value >= 50) {
-        detectedPlan = "START";
+      const isYearly = restaurant.billingCycle === "YEARLY";
+
+      if (isYearly) {
+        baseDate.setFullYear(baseDate.getFullYear() + 1);
+      } else {
+        baseDate.setMonth(baseDate.getMonth() + 1);
       }
-
-      console.log(
-        `🔄 Atualizando loja ${restaurant.name} para plano ${detectedPlan} e status ATIVO.`,
-      );
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
 
       await prisma.restaurant.update({
         where: { id: restaurant.id },
         data: {
           subscriptionStatus: "ACTIVE",
-          plan: detectedPlan,
-          planExpiresAt: expiresAt,
+          planExpiresAt: baseDate,
         },
       });
-    } else if (disableEvents.includes(event)) {
-      console.log(
-        `⛔ [Asaas] Pagamento pendente/falhou. Bloqueando loja: ${restaurant.name}`,
-      );
 
+      console.log(
+        `[Webhook] Assinatura renovada (${isYearly ? "ANUAL" : "MENSAL"}) para restaurante ${restaurant.name}. Nova expiração: ${baseDate.toISOString()}`,
+      );
+    } else if (event === "PAYMENT_OVERDUE") {
       await prisma.restaurant.update({
         where: { id: restaurant.id },
-        data: { subscriptionStatus: "INACTIVE" },
+        data: {
+          subscriptionStatus: "OVERDUE",
+        },
       });
+      console.log(
+        `[Webhook] Assinatura vencida para restaurante ${restaurant.name}`,
+      );
     }
   }
 }
