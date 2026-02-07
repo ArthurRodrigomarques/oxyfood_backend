@@ -43,10 +43,12 @@ export const asaasService = {
     }
   },
 
+  // AQUI ESTAVA O ERRO: Agora aceitamos o 4º argumento 'cycle'
   async createSubscription(
     customerId: string,
     value: number,
     restaurantId: string,
+    cycle: "MONTHLY" | "YEARLY", // <--- Adicionado
   ) {
     try {
       const response = await asaasApi.post("/subscriptions", {
@@ -54,8 +56,8 @@ export const asaasService = {
         billingType: "PIX",
         value: value,
         nextDueDate: new Date().toISOString().split("T")[0],
-        cycle: "MONTHLY",
-        description: "Assinatura OxyFood Pro",
+        cycle: cycle, // <--- Usamos a variável aqui
+        description: `Assinatura OxyFood ${cycle === "MONTHLY" ? "Mensal" : "Anual"}`,
         externalReference: restaurantId,
       });
       return response.data;

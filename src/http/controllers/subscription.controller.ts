@@ -6,23 +6,27 @@ export async function createSubscription(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const bodySchema = z.object({
+  const paramsSchema = z.object({
     restaurantId: z.string().uuid(),
-    userId: z.string().uuid(),
-    plan: z.enum(["START", "PRO", "ENTERPRISE"]),
   });
+  const { restaurantId } = paramsSchema.parse(request.params);
 
-  const { restaurantId, userId, plan } = bodySchema.parse(request.body);
+  const bodySchema = z.object({
+    plan: z.enum(["START", "PRO", "ENTERPRISE"]),
+    billingCycle: z.enum(["MONTHLY", "YEARLY"]).default("MONTHLY"),
+  });
+  const { plan, billingCycle } = bodySchema.parse(request.body);
+
+  const userId = (request as any).user.sub;
 
   const useCase = new CreateSubscriptionUseCase();
 
-  // Executa a criação da assinatura
   const result = await useCase.execute({
     restaurantId,
     userId,
     plan,
+    billingCycle,
   });
 
-  // Retorna o link de pagamento
   return reply.status(201).send(result);
 }
