@@ -241,10 +241,22 @@ export class RestaurantController {
       const bodySchema = z.object({
         plan: z.enum(["START", "PRO", "ENTERPRISE"]),
         billingCycle: z.enum(["MONTHLY", "YEARLY"]),
+        billingType: z.enum(["PIX", "CREDIT_CARD", "UNDEFINED"]).optional(),
+        creditCard: z
+          .object({
+            holderName: z.string(),
+            number: z.string(),
+            expiryMonth: z.string(),
+            expiryYear: z.string(),
+            ccv: z.string(),
+          })
+          .optional(),
       });
 
       const { restaurantId } = paramsSchema.parse(request.params);
-      const { plan, billingCycle } = bodySchema.parse(request.body);
+      const { plan, billingCycle, billingType, creditCard } = bodySchema.parse(
+        request.body,
+      );
 
       const createSubscription = new CreateSubscriptionUseCase();
 
@@ -253,11 +265,18 @@ export class RestaurantController {
         userId,
         plan,
         billingCycle,
+        billingType: billingType || "PIX",
+        creditCard,
       });
 
       return reply.status(201).send(result);
     } catch (error: any) {
       console.error(error);
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ message: "Dados inválidos", errors: error.format() });
+      }
       return reply
         .status(400)
         .send({ message: error.message || "Erro ao criar assinatura" });

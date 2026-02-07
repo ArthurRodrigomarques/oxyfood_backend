@@ -6,6 +6,14 @@ interface CreateSubscriptionRequest {
   userId: string;
   plan: "START" | "PRO" | "ENTERPRISE";
   billingCycle: "MONTHLY" | "YEARLY";
+  billingType?: "PIX" | "CREDIT_CARD" | "UNDEFINED";
+  creditCard?: {
+    holderName: string;
+    number: string;
+    expiryMonth: string;
+    expiryYear: string;
+    ccv: string;
+  };
 }
 
 export class CreateSubscriptionUseCase {
@@ -14,6 +22,8 @@ export class CreateSubscriptionUseCase {
     userId,
     plan,
     billingCycle,
+    billingType = "PIX",
+    creditCard,
   }: CreateSubscriptionRequest) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -29,16 +39,6 @@ export class CreateSubscriptionUseCase {
 
     if (restaurant.userId !== user.id) {
       throw new Error("Este restaurante não pertence a você.");
-    }
-
-    if (
-      restaurant.subscriptionStatus === "ACTIVE" &&
-      restaurant.plan === plan &&
-      restaurant.billingCycle === billingCycle
-    ) {
-      throw new Error(
-        "Você já possui este plano ativo. Não é necessário pagar novamente.",
-      );
     }
 
     const prices = {
@@ -59,11 +59,12 @@ export class CreateSubscriptionUseCase {
           "É necessário ter um CPF ou CNPJ cadastrado nas configurações.",
         );
       }
+      const cleanDoc = docNumber.replace(/\D/g, "");
 
       asaasCustomerId = await asaasService.createCustomer({
         name: user.name,
         email: user.email,
-        cpfCnpj: docNumber,
+        cpfCnpj: cleanDoc,
         phone: restaurant.phoneNumber || "",
         externalId: user.id,
       });
@@ -78,6 +79,15 @@ export class CreateSubscriptionUseCase {
       throw new Error("Falha ao identificar cliente no Asaas.");
     }
 
+    const subscription = await asaasService.createSubscription(
+      asaasCustomerId,
+      price,
+      restaurant.id,
+      billingCycle,
+      billingType,
+      creditCard,
+    );
+
     await prisma.restaurant.update({
       where: { id: restaurant.id },
       data: {
@@ -87,16 +97,14 @@ export class CreateSubscriptionUseCase {
       },
     });
 
-    const subscription = await asaasService.createSubscription(
-      asaasCustomerId,
-      price,
-      restaurant.id,
-      billingCycle,
-    );
+    let payments: any[] = [];
+    let attempts = 0;
+    while (payments.length === 0 && attempts < 5) {
+      if (attempts > 0) await new Promise((r) => setTimeout(r, 1000));
+      payments = await asaasService.getSubscriptionPayments(subscription.id);
+      attempts++;
+    }
 
-    const payments = await asaasService.getSubscriptionPayments(
-      subscription.id,
-    );
     const firstPayment = payments && payments.length > 0 ? payments[0] : null;
 
     return {
