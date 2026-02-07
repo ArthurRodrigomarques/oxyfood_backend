@@ -17,7 +17,7 @@ model User {
   updatedAt          DateTime     @updatedAt @map("updated_at")
   role               UserRole     @default(OWNER)
   asaasCustomerId    String?      @map("asaas_customer_id")
-  cpf                String?
+  cpf                String?      @unique
   email_verified_at  DateTime?
   verification_token String?
   restaurants        Restaurant[]

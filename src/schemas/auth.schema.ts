@@ -8,6 +8,7 @@ export const registerUserBodySchema = z.object({
   password: z
     .string()
     .min(6, { message: "A senha precisa ter no mínimo 6 caracteres." }),
+  cpf: z.string().min(11).max(14),
   role: z.enum(["OWNER", "ADMIN", "SUPER_ADMIN"]).optional(),
 });
 
