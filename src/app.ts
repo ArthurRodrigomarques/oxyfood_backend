@@ -19,6 +19,7 @@ import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
+import { planRoutes } from "./http/routes/plans.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -111,6 +112,8 @@ app.register(webhookRoutes);
 app.register(debugRoutes);
 
 app.register(subscriptionRoutes);
+
+app.register(planRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
   if (error instanceof ZodError) {
