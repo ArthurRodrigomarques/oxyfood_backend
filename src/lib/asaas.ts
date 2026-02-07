@@ -8,6 +8,14 @@ const asaasApi = axios.create({
   },
 });
 
+interface CreditCardData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+}
+
 export const asaasService = {
   async createCustomer(data: {
     name: string;
@@ -43,30 +51,48 @@ export const asaasService = {
     }
   },
 
-  // AQUI ESTAVA O ERRO: Agora aceitamos o 4º argumento 'cycle'
   async createSubscription(
     customerId: string,
     value: number,
     restaurantId: string,
-    cycle: "MONTHLY" | "YEARLY", // <--- Adicionado
+    cycle: "MONTHLY" | "YEARLY",
+    billingType: "PIX" | "CREDIT_CARD" | "UNDEFINED",
+    creditCard?: CreditCardData,
   ) {
     try {
-      const response = await asaasApi.post("/subscriptions", {
+      const payload: any = {
         customer: customerId,
-        billingType: "PIX",
+        billingType: billingType,
         value: value,
         nextDueDate: new Date().toISOString().split("T")[0],
-        cycle: cycle, // <--- Usamos a variável aqui
+        cycle: cycle,
         description: `Assinatura OxyFood ${cycle === "MONTHLY" ? "Mensal" : "Anual"}`,
         externalReference: restaurantId,
-      });
+      };
+
+      if (billingType === "CREDIT_CARD" && creditCard) {
+        payload.creditCard = creditCard;
+        payload.creditCardHolderInfo = {
+          name: creditCard.holderName,
+          email: "email@do-titular.com",
+          cpfCnpj: "00000000000",
+          postalCode: "00000000",
+          addressNumber: "0",
+          phone: "00000000000",
+        };
+      }
+
+      const response = await asaasApi.post("/subscriptions", payload);
       return response.data;
     } catch (error: any) {
       console.error(
         "Erro Asaas createSubscription:",
         error.response?.data || error.message,
       );
-      throw new Error("Falha ao criar assinatura no Asaas");
+      throw new Error(
+        error.response?.data?.errors?.[0]?.description ||
+          "Falha ao criar assinatura no Asaas",
+      );
     }
   },
 
@@ -82,6 +108,19 @@ export const asaasService = {
         error.response?.data || error.message,
       );
       return [];
+    }
+  },
+
+  async getSubscription(subscriptionId: string) {
+    try {
+      const response = await asaasApi.get(`/subscriptions/${subscriptionId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas getSubscription:",
+        error.response?.data || error.message,
+      );
+      throw new Error("Falha ao buscar assinatura");
     }
   },
 };
