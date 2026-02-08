@@ -1,9 +1,12 @@
-// src/config/plans.ts
-
 export const SUBSCRIPTION_PLANS = {
   START: {
     name: "Start",
-    features: ["1 Unidade", "Cardápio Digital", "Gestão de Pedidos"],
+    features: [
+      "1 Unidade",
+      "Cardápio Digital",
+      "Gestão de Pedidos",
+      "Impressão de Pedidos",
+    ],
     prices: {
       MONTHLY: 59.9,
       YEARLY: 599.0,
