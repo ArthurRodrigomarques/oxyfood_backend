@@ -4,13 +4,18 @@ export const createProductBodySchema = z.object({
   name: z
     .string()
     .min(3, { message: "O nome precisa ter no mínimo 3 caracteres." }),
-  description: z.string().optional(),
+
+  description: z
+    .string()
+    .min(1, { message: "A descrição é obrigatória." })
+    .min(5, { message: "A descrição deve ter no mínimo 5 caracteres." }),
 
   basePrice: z.coerce
-    .number({ error: "O preço base deve ser um número." })
+    .number()
     .positive({ message: "O preço base deve ser um valor positivo." }),
 
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().url({ message: "URL da imagem inválida." }),
+
   available: z.boolean().optional(),
 });
 
