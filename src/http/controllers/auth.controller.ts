@@ -62,6 +62,7 @@ export class AuthController {
       await sendForgot.execute({ email });
       return reply.status(204).send();
     } catch (error: any) {
+      console.error("Erro no envio de e-mail:", error);
       return reply.status(204).send();
     }
   }
@@ -69,10 +70,12 @@ export class AuthController {
   async resetPassword(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { token, newPassword } = resetPasswordBodySchema.parse(
-        request.body
+        request.body,
       );
+
       const resetPasswordUseCase = new ResetPasswordUseCase();
       await resetPasswordUseCase.execute({ token, newPassword });
+
       return reply.status(200).send({ message: "Senha alterada com sucesso." });
     } catch (error: any) {
       if (error instanceof z.ZodError) {

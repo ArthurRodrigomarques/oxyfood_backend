@@ -38,7 +38,7 @@ export class SendForgotPasswordUseCase {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     const message = await mailClient.sendMail({
-      from: "OxyFood <noreply@oxyfood.com>",
+      from: `OxyFood <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Recuperação de Senha - OxyFood",
       html: `
@@ -59,7 +59,7 @@ export class SendForgotPasswordUseCase {
 
     console.log(
       "📧 URL de Teste do E-mail:",
-      nodemailer.getTestMessageUrl(message)
+      nodemailer.getTestMessageUrl(message),
     );
   }
 }
