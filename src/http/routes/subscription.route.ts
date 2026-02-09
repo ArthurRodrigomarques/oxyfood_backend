@@ -1,5 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { createSubscription } from "@/http/controllers/subscription.controller.js";
+import {
+  createSubscription,
+  cancelSubscription,
+} from "@/http/controllers/subscription.controller.js";
 import { SubscriptionCronController } from "@/http/controllers/subscription-cron.controller.js";
 import { authMiddleware } from "@/http/middlewares/auth.middleware.js";
 
@@ -13,4 +16,10 @@ export async function subscriptionRoutes(app: FastifyInstance) {
   );
 
   app.get("/subscriptions/check-expired", cronController.handle);
+
+  app.patch(
+    "/subscription/cancel",
+    { onRequest: [authMiddleware] },
+    cancelSubscription,
+  );
 }

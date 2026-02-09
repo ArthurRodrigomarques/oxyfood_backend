@@ -56,9 +56,10 @@ export class CreateSubscriptionUseCase {
 
       if (!docNumber) {
         throw new Error(
-          "É necessário ter um CPF ou CNPJ cadastrado nas configurações.",
+          "É necessário ter um CPF ou CNPJ cadastrado para assinar.",
         );
       }
+
       const cleanDoc = docNumber.replace(/\D/g, "");
 
       asaasCustomerId = await asaasService.createCustomer({
@@ -80,7 +81,7 @@ export class CreateSubscriptionUseCase {
     }
 
     const subscription = await asaasService.createSubscription(
-      asaasCustomerId,
+      asaasCustomerId!,
       price,
       restaurant.id,
       billingCycle,
@@ -94,11 +95,13 @@ export class CreateSubscriptionUseCase {
         plan: plan,
         billingCycle: billingCycle,
         subscriptionStatus: "PENDING",
+        asaasSubscriptionId: subscription.id,
       },
     });
 
     let payments: any[] = [];
     let attempts = 0;
+
     while (payments.length === 0 && attempts < 5) {
       if (attempts > 0) await new Promise((r) => setTimeout(r, 1000));
       payments = await asaasService.getSubscriptionPayments(subscription.id);

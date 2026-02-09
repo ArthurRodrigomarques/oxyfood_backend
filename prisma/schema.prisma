@@ -43,6 +43,7 @@ model Restaurant {
   bannerUrl              String?       @map("banner_url")
   mercadoPagoAccessToken String?       @map("mp_access_token")
   cpfCnpj                String?       @map("cpf_cnpj")
+  asaasSubscriptionId    String?       @map("asaas_subscription_id")
   subscriptionStatus     String        @default("INACTIVE") @map("subscription_status")
   deliveryTimeMax        Int           @default(45) @map("delivery_time_max")
   deliveryTimeMin        Int           @default(30) @map("delivery_time_min")

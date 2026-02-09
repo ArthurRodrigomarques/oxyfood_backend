@@ -123,4 +123,19 @@ export const asaasService = {
       throw new Error("Falha ao buscar assinatura");
     }
   },
+
+  async cancelSubscription(subscriptionId: string) {
+    try {
+      const response = await asaasApi.delete(
+        `/subscriptions/${subscriptionId}`,
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "Erro Asaas cancelSubscription:",
+        error.response?.data || error.message,
+      );
+      throw new Error("Falha ao cancelar assinatura");
+    }
+  },
 };
