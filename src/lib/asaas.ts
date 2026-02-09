@@ -8,12 +8,21 @@ const asaasApi = axios.create({
   },
 });
 
-interface CreditCardData {
+export interface CreditCardData {
   holderName: string;
   number: string;
   expiryMonth: string;
   expiryYear: string;
   ccv: string;
+}
+
+export interface CreditCardHolderInfo {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone: string;
 }
 
 export const asaasService = {
@@ -58,6 +67,7 @@ export const asaasService = {
     cycle: "MONTHLY" | "YEARLY",
     billingType: "PIX" | "CREDIT_CARD" | "UNDEFINED",
     creditCard?: CreditCardData,
+    holderInfo?: CreditCardHolderInfo,
   ) {
     try {
       const payload: any = {
@@ -70,15 +80,21 @@ export const asaasService = {
         externalReference: restaurantId,
       };
 
-      if (billingType === "CREDIT_CARD" && creditCard) {
+      if (billingType === "CREDIT_CARD") {
+        if (!creditCard || !holderInfo) {
+          throw new Error(
+            "Dados do cartão e do titular são obrigatórios para pagamento via Crédito.",
+          );
+        }
+
         payload.creditCard = creditCard;
         payload.creditCardHolderInfo = {
-          name: creditCard.holderName,
-          email: "email@do-titular.com",
-          cpfCnpj: "00000000000",
-          postalCode: "00000000",
-          addressNumber: "0",
-          phone: "00000000000",
+          name: holderInfo.name,
+          email: holderInfo.email,
+          cpfCnpj: holderInfo.cpfCnpj,
+          postalCode: holderInfo.postalCode,
+          addressNumber: holderInfo.addressNumber,
+          phone: holderInfo.phone,
         };
       }
 
@@ -89,10 +105,9 @@ export const asaasService = {
         "Erro Asaas createSubscription:",
         error.response?.data || error.message,
       );
-      throw new Error(
-        error.response?.data?.errors?.[0]?.description ||
-          "Falha ao criar assinatura no Asaas",
-      );
+
+      const asaasError = error.response?.data?.errors?.[0]?.description;
+      throw new Error(asaasError || "Falha ao criar assinatura no Asaas");
     }
   },
 

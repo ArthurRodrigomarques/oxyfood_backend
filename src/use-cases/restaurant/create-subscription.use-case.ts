@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
 import { asaasService } from "@/lib/asaas.js";
-
 interface CreateSubscriptionRequest {
   restaurantId: string;
   userId: string;
@@ -14,6 +13,14 @@ interface CreateSubscriptionRequest {
     expiryYear: string;
     ccv: string;
   };
+  creditCardHolderInfo?: {
+    name: string;
+    email: string;
+    cpfCnpj: string;
+    postalCode: string;
+    addressNumber: string;
+    phone: string;
+  };
 }
 
 export class CreateSubscriptionUseCase {
@@ -24,6 +31,7 @@ export class CreateSubscriptionUseCase {
     billingCycle,
     billingType = "PIX",
     creditCard,
+    creditCardHolderInfo,
   }: CreateSubscriptionRequest) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -87,6 +95,7 @@ export class CreateSubscriptionUseCase {
       billingCycle,
       billingType,
       creditCard,
+      creditCardHolderInfo,
     );
 
     await prisma.restaurant.update({

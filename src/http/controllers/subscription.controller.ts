@@ -15,8 +15,30 @@ export async function createSubscription(
   const bodySchema = z.object({
     plan: z.enum(["START", "PRO", "ENTERPRISE"]),
     billingCycle: z.enum(["MONTHLY", "YEARLY"]).default("MONTHLY"),
+    billingType: z.enum(["PIX", "CREDIT_CARD", "UNDEFINED"]).default("PIX"),
+    creditCard: z
+      .object({
+        holderName: z.string(),
+        number: z.string(),
+        expiryMonth: z.string(),
+        expiryYear: z.string(),
+        ccv: z.string(),
+      })
+      .optional(),
+    creditCardHolderInfo: z
+      .object({
+        name: z.string(),
+        email: z.string().email(),
+        cpfCnpj: z.string(),
+        postalCode: z.string(),
+        addressNumber: z.string(),
+        phone: z.string(),
+      })
+      .optional(),
   });
-  const { plan, billingCycle } = bodySchema.parse(request.body);
+
+  const { plan, billingCycle, billingType, creditCard, creditCardHolderInfo } =
+    bodySchema.parse(request.body);
 
   const userId = (request as any).user.sub;
 
@@ -27,6 +49,9 @@ export async function createSubscription(
     userId,
     plan,
     billingCycle,
+    billingType,
+    creditCard,
+    creditCardHolderInfo,
   });
 
   return reply.status(201).send(result);
@@ -46,9 +71,6 @@ export async function cancelSubscription(
   }
 
   const user = (request as any).user;
-
-  console.log("User autenticado:", user);
-
   const useCase = new CancelSubscriptionUseCase();
 
   try {
