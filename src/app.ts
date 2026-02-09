@@ -1,8 +1,10 @@
 import fastify, { FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import { env } from "process";
 import { ZodError } from "zod";
+import fastifyJwt from "@fastify/jwt";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
@@ -17,8 +19,6 @@ import { debugRoutes } from "./http/routes/debug.route.js";
 import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
-import fastifySwagger from "@fastify/swagger";
-import fastifySwaggerUi from "@fastify/swagger-ui";
 import { planRoutes } from "./http/routes/plans.routes.js";
 
 declare module "fastify" {
@@ -38,6 +38,10 @@ export const app = fastify({
       },
     },
   },
+});
+
+app.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET || "dev-secret",
 });
 
 app.register(fastifySwagger, {
@@ -86,33 +90,20 @@ app.register(cors, {
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });
-//autenticação
+
 app.register(authRoutes);
-// login
 app.register(userRoutes);
-// criar restaurante
 app.register(restaurantRoutes);
-// criar nova categoria de produto
 app.register(categoryRoutes);
-// registrar novos produtos
 app.register(productRoutes);
-// opções do produto
 app.register(optionGroupRoutes);
-// Opção
 app.register(optionRoutes);
-// pedidos
 app.register(orderRoutes);
-
 app.register(superAdminRoutes);
-
 app.register(reviewRoutes);
-
 app.register(webhookRoutes);
-
 app.register(debugRoutes);
-
 app.register(subscriptionRoutes);
-
 app.register(planRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
@@ -128,11 +119,7 @@ app.setErrorHandler((error: FastifyError, request, reply) => {
       .send({ message: "Muitas requisições. Tente novamente mais tarde." });
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    request.log.error(error);
-  } else {
-    request.log.error(error);
-  }
+  request.log.error(error);
 
   return reply.status(500).send({ message: "Internal server error." });
 });
