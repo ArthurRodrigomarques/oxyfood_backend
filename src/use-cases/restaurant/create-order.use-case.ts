@@ -39,7 +39,7 @@ export class CreateOrderUseCase {
 
     if (restaurant.subscriptionStatus !== "ACTIVE") {
       throw new Error(
-        "Este restaurante não está aceitando pedidos no momento (Assinatura Inativa)."
+        "Este restaurante não está aceitando pedidos no momento (Assinatura Inativa).",
       );
     }
 
@@ -53,19 +53,19 @@ export class CreateOrderUseCase {
         Number(restaurant.latitude),
         Number(restaurant.longitude),
         customerLatitude,
-        customerLongitude
+        customerLongitude,
       );
 
       if (distance > restaurant.maxDeliveryDistanceKm) {
         throw new Error(
-          `Endereço fora da área de entrega. Máximo: ${restaurant.maxDeliveryDistanceKm}km.`
+          `Endereço fora da área de entrega. Máximo: ${restaurant.maxDeliveryDistanceKm}km.`,
         );
       }
     }
 
     const now = new Date();
     const brazilTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+      now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
     );
     const currentDay = brazilTime.getDay();
     const currentHour = brazilTime.getHours();
@@ -73,7 +73,7 @@ export class CreateOrderUseCase {
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
     const todaySchedules = restaurant.openingHours.filter(
-      (oh) => oh.dayOfWeek === currentDay
+      (oh) => oh.dayOfWeek === currentDay,
     );
 
     if (todaySchedules.length > 0) {
@@ -96,7 +96,7 @@ export class CreateOrderUseCase {
 
       if (!isOpenNow) {
         throw new Error(
-          "O restaurante está fechado de acordo com o horário programado."
+          "O restaurante está fechado de acordo com o horário programado.",
         );
       }
     } else if (restaurant.openingHours.length > 0) {
@@ -123,10 +123,18 @@ export class CreateOrderUseCase {
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
+        include: { category: true },
       });
 
       if (!product) {
         throw new Error(`Produto com ID ${item.productId} não encontrado.`);
+      }
+
+      if (product.category.restaurantId !== restaurantId) {
+        console.error(
+          `ALERTA DE SEGURANÇA: Tentativa de pedir produto ${product.id} (Restaurante ${product.category.restaurantId}) no Restaurante ${restaurantId}`,
+        );
+        throw new Error(`Produto inválido para este restaurante.`);
       }
 
       if (!product.available) {
@@ -144,7 +152,6 @@ export class CreateOrderUseCase {
       }, new Decimal(0));
 
       const unitPrice = product.basePrice.add(optionsPrice);
-
       subTotalPrice = subTotalPrice.add(unitPrice.mul(item.quantity));
 
       let optionsText = selectedOptions.map((opt) => opt.name).join(", ");
@@ -165,7 +172,6 @@ export class CreateOrderUseCase {
 
     const deliveryFee = restaurant.deliveryFee;
     const totalPrice = subTotalPrice.add(deliveryFee);
-
     const applicationFee = totalPrice.mul(OXYFOOD_FEE_PERCENTAGE).toNumber();
 
     const paymentMethodLabel =
@@ -204,8 +210,8 @@ export class CreateOrderUseCase {
       const safeEmail = "cliente@oxyfood.com";
       const safeFirstName = customerName.split(" ")[0] || "Cliente";
 
-      if (paymentMethod === "Pix") {
-        try {
+      try {
+        if (paymentMethod === "Pix") {
           const paymentData = await generatePixPayment({
             transactionAmount: Number(totalPrice),
             description: `Pedido #${order.id.slice(0, 4)}`,
@@ -217,10 +223,14 @@ export class CreateOrderUseCase {
             applicationFee: applicationFee,
           });
 
+          if (!paymentData.id) {
+            throw new Error("Falha ao obter ID do pagamento do Mercado Pago");
+          }
+
           await prisma.order.update({
             where: { id: order.id },
             data: {
-              mercadoPagoId: paymentData.id,
+              mercadoPagoId: paymentData.id.toString(),
               paymentLink: paymentData.qrCode || null,
             },
           });
@@ -229,14 +239,9 @@ export class CreateOrderUseCase {
             qrCodeBase64: paymentData.qrCodeBase64,
             paymentLink: paymentData.qrCode,
           });
-        } catch (error) {
-          await prisma.order.delete({ where: { id: order.id } });
-          throw new Error("Erro ao gerar Pix. Tente novamente.");
         }
-      }
 
-      if (paymentMethod === "CartaoOnline") {
-        try {
+        if (paymentMethod === "CartaoOnline") {
           const checkoutUrl = await createCheckoutPreference({
             items: orderItemsData.map((item) => ({
               id: item.productId,
@@ -258,19 +263,29 @@ export class CreateOrderUseCase {
           });
 
           order.paymentLink = checkoutUrl;
-        } catch (error) {
-          console.error(error);
-          await prisma.order.delete({ where: { id: order.id } });
-          throw new Error("Erro ao gerar Checkout. Tente novamente.");
         }
+      } catch (error: any) {
+        console.error("Erro ao gerar pagamento online:", error);
+
+        try {
+          await prisma.order.delete({ where: { id: order.id } });
+        } catch (deleteError) {
+          console.error(
+            `CRITICAL ERROR: Failed to rollback order ${order.id} after payment failure. Manual cleanup required.`,
+          );
+        }
+
+        throw new Error(
+          "Erro ao gerar link de pagamento. Por favor, tente novamente.",
+        );
       }
     }
 
-    if (!isOnlinePayment) {
-      try {
-        const io = getIO();
-        io.to(restaurantId).emit("new-order", order);
-      } catch (e) {}
+    try {
+      const io = getIO();
+      io.to(restaurantId).emit("new-order", order);
+    } catch (e) {
+      console.error("Erro ao emitir socket (não crítico):", e);
     }
 
     return order;
