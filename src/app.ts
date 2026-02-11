@@ -88,7 +88,7 @@ app.register(cors, {
     cb(new Error("Not allowed"), false);
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-cron-secret"],
 });
 
 app.register(authRoutes);
