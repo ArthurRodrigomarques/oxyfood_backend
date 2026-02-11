@@ -15,7 +15,11 @@ export async function subscriptionRoutes(app: FastifyInstance) {
     createSubscription,
   );
 
-  app.get("/subscriptions/check-expired", cronController.handle);
+  app.get(
+    "/subscriptions/check-expired",
+    { onRequest: [authMiddleware] },
+    cronController.handle.bind(cronController),
+  );
 
   app.patch(
     "/subscription/cancel",

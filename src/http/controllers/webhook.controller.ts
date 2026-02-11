@@ -10,7 +10,7 @@ export class WebhookController {
       const restaurantId = query.restaurantId;
 
       if (!restaurantId) {
-        return reply.status(400).send({ message: "RestaurantId required" });
+        return reply.status(400).send();
       }
 
       let paymentId =
@@ -32,14 +32,21 @@ export class WebhookController {
 
       return reply.status(200).send();
     } catch (error) {
-      console.error("Erro Webhook MP:", error);
-      return reply.status(200).send();
+      return reply.status(500).send();
     }
   }
 
   async handleAsaas(request: FastifyRequest, reply: FastifyReply) {
     try {
       const body = request.body as any;
+
+      const asaasToken = request.headers["asaas-access-token"];
+      if (
+        process.env.ASAAS_WEBHOOK_TOKEN &&
+        asaasToken !== process.env.ASAAS_WEBHOOK_TOKEN
+      ) {
+        return reply.status(401).send();
+      }
 
       if (!body.event || !body.payment) {
         return reply.status(200).send({ status: "ignored_invalid_payload" });
@@ -50,8 +57,7 @@ export class WebhookController {
 
       return reply.status(200).send({ received: true });
     } catch (error) {
-      console.error("❌ Erro Webhook Asaas:", error);
-      return reply.status(200).send({ received: false });
+      return reply.status(500).send({ received: false });
     }
   }
 }

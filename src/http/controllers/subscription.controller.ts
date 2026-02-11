@@ -15,7 +15,10 @@ export async function createSubscription(
   const bodySchema = z.object({
     plan: z.enum(["START", "PRO", "ENTERPRISE"]),
     billingCycle: z.enum(["MONTHLY", "YEARLY"]).default("MONTHLY"),
-    billingType: z.enum(["PIX", "CREDIT_CARD", "UNDEFINED"]).default("PIX"),
+    billingType: z
+      .enum(["PIX", "CREDIT_CARD", "UNDEFINED"])
+      .default("UNDEFINED"),
+
     creditCard: z
       .object({
         holderName: z.string(),
@@ -25,10 +28,11 @@ export async function createSubscription(
         ccv: z.string(),
       })
       .optional(),
+
     creditCardHolderInfo: z
       .object({
         name: z.string(),
-        email: z.string().email(),
+        email: z.string(),
         cpfCnpj: z.string(),
         postalCode: z.string(),
         addressNumber: z.string(),
@@ -64,7 +68,6 @@ export async function cancelSubscription(
   try {
     await request.jwtVerify();
   } catch (err) {
-    console.error("ERRO DETALHADO DO JWT:", err);
     return reply
       .status(401)
       .send({ message: "Falha na autenticação: Token inválido." });

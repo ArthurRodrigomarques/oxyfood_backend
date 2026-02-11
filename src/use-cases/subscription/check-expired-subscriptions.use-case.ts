@@ -3,15 +3,11 @@ import { prisma } from "@/lib/prisma.js";
 export class CheckExpiredSubscriptionsUseCase {
   async execute() {
     const now = new Date();
-
-    const expiredRestaurants = await prisma.restaurant.findMany({
+    const expiredStores = await prisma.restaurant.findMany({
       where: {
         subscriptionStatus: "ACTIVE",
         planExpiresAt: {
           lt: now,
-        },
-        plan: {
-          not: "ENTERPRISE",
         },
       },
       select: {
@@ -21,32 +17,34 @@ export class CheckExpiredSubscriptionsUseCase {
       },
     });
 
-    if (expiredRestaurants.length === 0) {
+    if (expiredStores.length === 0) {
       return {
-        processedAt: now,
+        processedAt: now.toISOString(),
         inactivatedCount: 0,
         deactivatedStores: [],
       };
     }
-
-    const idsToUpdate = expiredRestaurants.map((r) => r.id);
+    const expiredIds = expiredStores.map((store) => store.id);
 
     await prisma.restaurant.updateMany({
       where: {
         id: {
-          in: idsToUpdate,
+          in: expiredIds,
         },
       },
       data: {
-        subscriptionStatus: "INACTIVE",
-        isOpen: false,
+        subscriptionStatus: "OVERDUE",
       },
     });
 
     return {
-      processedAt: now,
-      inactivatedCount: expiredRestaurants.length,
-      deactivatedStores: expiredRestaurants,
+      processedAt: now.toISOString(),
+      inactivatedCount: expiredStores.length,
+      deactivatedStores: expiredStores.map((store) => ({
+        id: store.id,
+        name: store.name,
+        planExpiresAt: store.planExpiresAt?.toISOString(),
+      })),
     };
   }
 }

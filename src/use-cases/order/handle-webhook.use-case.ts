@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma.js";
 import { getPayment } from "@/lib/mercado-pago.js";
-import { io } from "@/lib/socket.js";
+import { getIO } from "@/lib/socket.js";
 
 interface HandleWebhookRequest {
   topic: string;
@@ -10,7 +10,7 @@ interface HandleWebhookRequest {
 
 export class HandleWebhookUseCase {
   async execute({ topic, id, restaurantId }: HandleWebhookRequest) {
-    if (topic !== "payment" && topic !== "payment.created") {
+    if (topic !== "payment" || !id) {
       return;
     }
 
@@ -19,16 +19,21 @@ export class HandleWebhookUseCase {
     });
 
     if (!restaurant || !restaurant.mercadoPagoAccessToken) {
-      throw new Error("Restaurante não encontrado ou sem token.");
+      return;
     }
 
-    const payment = await getPayment({
-      paymentId: id,
-      restaurantAccessToken: restaurant.mercadoPagoAccessToken,
-    });
+    let payment;
+    try {
+      payment = await getPayment({
+        paymentId: id,
+        restaurantAccessToken: restaurant.mercadoPagoAccessToken,
+      });
+    } catch (error) {
+      return;
+    }
 
-    if (!payment) {
-      throw new Error("Pagamento não encontrado.");
+    if (!payment || !payment.id) {
+      return;
     }
 
     if (payment.status === "approved") {
@@ -40,19 +45,20 @@ export class HandleWebhookUseCase {
         where: { id: orderId },
       });
 
-      if (order && order.status === "PENDING") {
+      if (order && order.paymentStatus !== "APPROVED") {
         const updatedOrder = await prisma.order.update({
           where: { id: orderId },
           data: {
             status: "PREPARING",
             paymentStatus: "APPROVED",
-            mercadoPagoId: payment.id?.toString(),
+            mercadoPagoId: payment.id.toString(),
           },
         });
 
-        if (io) {
+        try {
+          const io = getIO();
           io.to(restaurantId).emit("new-order", updatedOrder);
-        }
+        } catch (error) {}
       }
     }
   }
