@@ -63,6 +63,12 @@ export class ProductController {
 
       return reply.status(204).send();
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          message: "Erro de validação no ID",
+          errors: error.format(),
+        });
+      }
       return reply.status(400).send({ message: error.message });
     }
   }
