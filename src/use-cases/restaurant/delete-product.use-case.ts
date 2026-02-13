@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma.js";
+import { utapi } from "@/lib/uploadthing.js";
 
 interface DeleteProductRequest {
   productId: string;
@@ -22,8 +23,18 @@ export class DeleteProductUseCase {
       throw new Error("Produto não encontrado.");
     }
 
+    console.log("ID do Dono no Banco:", product.category.restaurant.userId);
+    console.log("ID do Usuário Logado:", userId);
+
     if (product.category.restaurant.userId !== userId) {
       throw new Error("Não autorizado.");
+    }
+
+    if (product.imageUrl) {
+      const fileKey = product.imageUrl.split("/f/")[1];
+      if (fileKey) {
+        await utapi.deleteFiles(fileKey);
+      }
     }
 
     await prisma.product.update({
@@ -31,6 +42,7 @@ export class DeleteProductUseCase {
       data: {
         deletedAt: new Date(),
         available: false,
+        imageUrl: null,
       },
     });
   }
