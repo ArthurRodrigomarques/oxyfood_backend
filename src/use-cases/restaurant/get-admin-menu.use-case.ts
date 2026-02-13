@@ -29,7 +29,11 @@ export class GetAdminMenuUseCase {
           },
           orderBy: { createdAt: "desc" },
           include: {
-            optionGroups: true,
+            optionGroups: {
+              include: {
+                options: true,
+              },
+            },
           },
         },
       },
