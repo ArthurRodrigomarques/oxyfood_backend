@@ -1,11 +1,14 @@
 import "dotenv/config";
 import { app } from "./app.js";
 import { initSocket } from "@/lib/socket.js";
+import { initSentry } from "./lib/sentry.js";
 
 const PORT = Number(process.env.PORT) || 3333;
 
 const start = async () => {
   try {
+    initSentry();
+
     await app.ready();
     initSocket(app.server);
 

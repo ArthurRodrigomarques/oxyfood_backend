@@ -47,4 +47,8 @@ export async function debugRoutes(app: FastifyInstance) {
       return reply.status(500).send({ error: error.message });
     }
   });
+
+  app.get("/debug-sentry", async (request, reply) => {
+    throw new Error("Teste do Sentry no Backend Oxyfood! 🚨");
+  });
 }
