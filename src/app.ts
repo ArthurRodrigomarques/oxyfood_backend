@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import fastifyJwt from "@fastify/jwt";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
+import * as Sentry from "@sentry/node";
 
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
@@ -27,8 +28,8 @@ declare module "fastify" {
   }
 }
 
-export const app = fastify({
-  logger: {
+const envToLogger = {
+  development: {
     transport: {
       target: "pino-pretty",
       options: {
@@ -38,6 +39,12 @@ export const app = fastify({
       },
     },
   },
+  production: true,
+  test: false,
+};
+
+export const app = fastify({
+  logger: envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
 });
 
 app.register(fastifyJwt, {
@@ -111,6 +118,13 @@ app.setErrorHandler((error: FastifyError, request, reply) => {
     return reply
       .status(400)
       .send({ message: "Validation error.", issues: error.format() });
+  }
+
+  if (
+    error.statusCode !== 429 &&
+    (!error.statusCode || error.statusCode >= 500)
+  ) {
+    Sentry.captureException(error);
   }
 
   if (error.statusCode === 429) {
