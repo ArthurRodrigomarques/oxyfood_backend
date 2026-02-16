@@ -28,8 +28,8 @@ declare module "fastify" {
   }
 }
 
-export const app = fastify({
-  logger: {
+const envToLogger = {
+  development: {
     transport: {
       target: "pino-pretty",
       options: {
@@ -39,6 +39,12 @@ export const app = fastify({
       },
     },
   },
+  production: true,
+  test: false,
+};
+
+export const app = fastify({
+  logger: envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
 });
 
 app.register(fastifyJwt, {
