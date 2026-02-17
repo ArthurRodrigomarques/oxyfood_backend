@@ -33,6 +33,7 @@ const envSchema = z.object({
   REDIS_HOST: z.string().default("localhost"),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASS: z.string().optional(),
+  REDIS_URL: z.string(),
 
   EVOLUTION_API_URL: z.string().url(),
   EVOLUTION_API_KEY: z.string(),

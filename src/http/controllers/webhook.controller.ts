@@ -1,6 +1,9 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { HandleWebhookUseCase } from "@/use-cases/order/handle-webhook.use-case.js";
 import { HandleAsaasWebhookUseCase } from "@/use-cases/restaurant/handle-asaas-webhook.use-case.js";
+import { prisma } from "@/lib/prisma.js";
+import { evolutionApi } from "@/lib/evolution-api.js";
+import { whatsappQueue } from "@/lib/queue.js";
 
 export class WebhookController {
   async handleMercadoPago(request: FastifyRequest, reply: FastifyReply) {
@@ -59,5 +62,25 @@ export class WebhookController {
     } catch (error) {
       return reply.status(500).send({ received: false });
     }
+  }
+
+  async handleEvolution(request: FastifyRequest, reply: FastifyReply) {
+    const body = request.body as any;
+
+    if (body.event !== "MESSAGES_UPSERT") {
+      return reply.status(200).send();
+    }
+
+    const messageData = body.data;
+
+    if (messageData.key.fromMe) {
+      return reply.status(200).send();
+    }
+    await whatsappQueue.add("process-message", {
+      instanceName: body.instance,
+      messageData: messageData,
+    });
+
+    return reply.status(200).send();
   }
 }
