@@ -6,6 +6,7 @@ import fastifyJwt from "@fastify/jwt";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import * as Sentry from "@sentry/node";
+import { redis } from "./lib/redis.js";
 
 import { authRoutes } from "./http/routes/auth.routes.js";
 import { userRoutes } from "./http/routes/user.routes.js";
@@ -21,6 +22,7 @@ import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
 import { planRoutes } from "./http/routes/plans.routes.js";
+import { whatsappRoutes } from "./http/routes/whatsapp.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -72,6 +74,8 @@ app.register(fastifySwaggerUi, {
 app.register(rateLimit, {
   max: 100,
   timeWindow: "1 minute",
+  redis: redis,
+  keyGenerator: (request) => request.ip,
 });
 
 app.register(cors, {
@@ -112,6 +116,7 @@ app.register(webhookRoutes);
 app.register(debugRoutes);
 app.register(subscriptionRoutes);
 app.register(planRoutes);
+app.register(whatsappRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
   if (error instanceof ZodError) {

@@ -53,6 +53,10 @@ model Restaurant {
   plan                   PlanType      @default(START)
   billingCycle   BillingCycle @default(MONTHLY)
   planExpiresAt          DateTime?
+  whatsappInstanceName String? @unique @map("whatsapp_instance_name") // Nome da instância na Evolution (ex: restaurante_id_123)
+  whatsappStatus       String  @default("DISCONNECTED") @map("whatsapp_status") // CONNECTED, QRCODE, DISCONNECTED
+  botActive            Boolean @default(false) @map("bot_active") // o bot responde automaticamente
+  botGreeting          String? @map("bot_greeting")
   categories             Category[]
   coupons                Coupon[]
   openingHours           OpeningHour[]

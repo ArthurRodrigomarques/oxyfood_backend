@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { initSentry } from "@/lib/sentry.js";
+import "./workers/whatsapp.worker.js";
+import { env } from "./env/index.js";
 
 initSentry();
 
@@ -20,7 +22,7 @@ const start = async () => {
     });
 
     console.log(`🚀 HTTP Server Running on port ${PORT}!`);
-    console.log(`📑 API Documentation: http://localhost:${PORT}/docs`);
+    console.log(`📑 API Documentation: http://localhost:${env.PORT}/docs`);
 
     // --- Graceful Shutdown ---
 

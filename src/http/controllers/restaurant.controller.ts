@@ -18,6 +18,8 @@ import { UpdateRestaurantUseCase } from "@/use-cases/restaurant/update-restauran
 import { GetRestaurantMetricsUseCase } from "@/use-cases/restaurant/get-restaurant-metrics.use-case.js";
 import { CreateSubscriptionUseCase } from "@/use-cases/restaurant/create-subscription.use-case.js";
 import { GetRestaurantByIdUseCase } from "@/use-cases/restaurant/get-restaurant-by-id.use-case.js";
+import { redis } from "@/lib/redis.js";
+import { prisma } from "@/lib/prisma.js";
 
 export class RestaurantController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -45,8 +47,19 @@ export class RestaurantController {
   async getPublic(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { slug } = getPublicRestaurantParamsSchema.parse(request.params);
+      const cacheKey = `restaurant:${slug}:public`;
+
+      const cached = await redis.get(cacheKey);
+
+      if (cached) {
+        return reply.status(200).send(JSON.parse(cached));
+      }
+
       const getRestaurant = new GetPublicRestaurantUseCase();
       const { restaurant } = await getRestaurant.execute({ slug });
+
+      await redis.set(cacheKey, JSON.stringify({ restaurant }), "EX", 3600);
+
       return reply.status(200).send({ restaurant });
     } catch (error: any) {
       if (error instanceof Error) {
@@ -83,6 +96,9 @@ export class RestaurantController {
         userId,
         ...body,
       });
+
+      await redis.del(`restaurant:${restaurantId}:id`);
+      await redis.del(`restaurant:${restaurant.slug}:public`);
 
       console.log(
         "Update Concluído. Token salvo no DB:",
@@ -121,6 +137,9 @@ export class RestaurantController {
         isOpen,
         userId,
       });
+
+      await redis.del(`restaurant:${restaurantId}:id`);
+      await redis.del(`restaurant:${updatedRestaurant.slug}:public`);
 
       return reply.status(200).send({ restaurant: updatedRestaurant });
     } catch (error: any) {
@@ -207,6 +226,12 @@ export class RestaurantController {
       const useCase = new UpsertOpeningHoursUseCase();
       const result = await useCase.execute({ restaurantId, schedules });
 
+      await redis.del(`restaurant:${restaurantId}:id`);
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+      });
+      if (restaurant) await redis.del(`restaurant:${restaurant.slug}:public`);
+
       return reply.status(200).send(result);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -222,9 +247,18 @@ export class RestaurantController {
     });
 
     const { restaurantId } = paramsSchema.parse(request.params);
+    const cacheKey = `restaurant:${restaurantId}:id`;
+
+    const cached = await redis.get(cacheKey);
+
+    if (cached) {
+      return reply.status(200).send(JSON.parse(cached));
+    }
 
     const useCase = new GetRestaurantByIdUseCase();
     const restaurant = await useCase.execute({ restaurantId });
+
+    await redis.set(cacheKey, JSON.stringify(restaurant), "EX", 3600);
 
     return reply.send(restaurant);
   }

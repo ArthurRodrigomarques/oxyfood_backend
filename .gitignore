@@ -8,3 +8,5 @@ dist
 .env
 .env.development
 /generated/prisma
+
+docker_data/
