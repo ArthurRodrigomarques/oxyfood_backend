@@ -21,6 +21,9 @@ export const createOrderBodySchema = z.object({
     message: "Método de pagamento inválido.",
   }),
   trocoPara: z.coerce.number().positive().optional(),
+
+  couponCode: z.string().optional(),
+
   items: z
     .array(OrderItemSchema)
     .min(1, { message: "O carrinho não pode estar vazio." }),

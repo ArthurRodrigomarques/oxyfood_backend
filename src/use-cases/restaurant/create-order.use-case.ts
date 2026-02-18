@@ -12,6 +12,7 @@ import { getDistanceFromLatLonInKm } from "@/lib/geo.js";
 
 type CreateOrderRequest = z.infer<typeof createOrderBodySchema> & {
   restaurantId: string;
+  couponCode?: string;
 };
 
 const OXYFOOD_FEE_PERCENTAGE = 0.05;
@@ -27,6 +28,7 @@ export class CreateOrderUseCase {
     paymentMethod,
     trocoPara,
     items,
+    couponCode,
   }: CreateOrderRequest): Promise<Order> {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
@@ -132,7 +134,7 @@ export class CreateOrderUseCase {
 
       if (product.category.restaurantId !== restaurantId) {
         console.error(
-          `ALERTA DE SEGURANÇA: Tentativa de pedir produto ${product.id} (Restaurante ${product.category.restaurantId}) no Restaurante ${restaurantId}`,
+          `ALERTA DE SEGURANÇA: Tentativa de pedir produto ${product.id} no Restaurante ${restaurantId}`,
         );
         throw new Error(`Produto inválido para este restaurante.`);
       }
@@ -170,8 +172,76 @@ export class CreateOrderUseCase {
       });
     }
 
+    let discountPrice = new Decimal(0);
+    let couponId = null;
+
+    if (couponCode) {
+      const coupon = await prisma.coupon.findFirst({
+        where: {
+          code: couponCode.toUpperCase(),
+          restaurantId: restaurantId,
+          active: true,
+        },
+      });
+
+      if (!coupon) {
+        throw new Error("Cupom inválido ou não encontrado.");
+      }
+
+      const alreadyUsed = await prisma.order.findFirst({
+        where: {
+          restaurantId: restaurantId,
+          customerPhone: customerPhone,
+          couponId: coupon.id,
+          status: {
+            not: "CANCELED",
+          },
+        },
+      });
+
+      if (alreadyUsed) {
+        throw new Error("Você já utilizou este cupom em um pedido anterior.");
+      }
+
+      if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+        throw new Error("Este cupom expirou.");
+      }
+
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        throw new Error("O limite global de uso deste cupom foi atingido.");
+      }
+
+      if (
+        coupon.minOrderValue &&
+        subTotalPrice.lessThan(coupon.minOrderValue)
+      ) {
+        throw new Error(
+          `O valor mínimo para este cupom é R$ ${coupon.minOrderValue}.`,
+        );
+      }
+
+      if (coupon.discountType === "PERCENTAGE") {
+        discountPrice = subTotalPrice.mul(coupon.discountValue.div(100));
+
+        if (
+          coupon.maxDiscount &&
+          discountPrice.greaterThan(coupon.maxDiscount)
+        ) {
+          discountPrice = coupon.maxDiscount;
+        }
+      } else {
+        discountPrice = coupon.discountValue;
+      }
+
+      if (discountPrice.greaterThan(subTotalPrice)) {
+        discountPrice = subTotalPrice;
+      }
+
+      couponId = coupon.id;
+    }
+
     const deliveryFee = restaurant.deliveryFee;
-    const totalPrice = subTotalPrice.add(deliveryFee);
+    const totalPrice = subTotalPrice.sub(discountPrice).add(deliveryFee);
     const applicationFee = totalPrice.mul(OXYFOOD_FEE_PERCENTAGE).toNumber();
 
     const paymentMethodLabel =
@@ -188,6 +258,8 @@ export class CreateOrderUseCase {
         trocoPara,
         subTotalPrice,
         deliveryFee,
+        discountPrice,
+        couponId,
         totalPrice,
         restaurantId: restaurantId,
         paymentStatus: "PENDING",
@@ -205,6 +277,15 @@ export class CreateOrderUseCase {
         orderItems: { include: { product: true } },
       },
     });
+
+    if (couponId) {
+      await prisma.coupon.update({
+        where: { id: couponId },
+        data: {
+          usedCount: { increment: 1 },
+        },
+      });
+    }
 
     if (isOnlinePayment && tokenToUse) {
       const safeEmail = "cliente@oxyfood.com";
@@ -271,7 +352,7 @@ export class CreateOrderUseCase {
           await prisma.order.delete({ where: { id: order.id } });
         } catch (deleteError) {
           console.error(
-            `CRITICAL ERROR: Failed to rollback order ${order.id} after payment failure. Manual cleanup required.`,
+            `CRITICAL ERROR: Failed to rollback order ${order.id}.`,
           );
         }
 
