@@ -10,4 +10,10 @@ export async function couponRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     couponController.create,
   );
+
+  app.get(
+    "/restaurants/:restaurantId/coupons",
+    { onRequest: [authMiddleware] },
+    couponController.list,
+  );
 }
