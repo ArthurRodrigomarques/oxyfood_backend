@@ -22,7 +22,7 @@ import { superAdminRoutes } from "./http/routes/super-admin.routes.js";
 import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
 import { planRoutes } from "./http/routes/plans.routes.js";
-import { whatsappRoutes } from "./http/routes/whatsapp.routes.js";
+// import { whatsappRoutes } from "./http/routes/whatsapp.routes.js";
 
 declare module "fastify" {
   export interface FastifyRequest {
@@ -116,7 +116,7 @@ app.register(webhookRoutes);
 app.register(debugRoutes);
 app.register(subscriptionRoutes);
 app.register(planRoutes);
-app.register(whatsappRoutes);
+// app.register(whatsappRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
   if (error instanceof ZodError) {
