@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { CreateCouponUseCase } from "@/use-cases/restaurant/create-coupon.use-case.js";
+import { ListCouponsUseCase } from "@/use-cases/restaurant/list-coupons.use-case.js";
 
 export class CouponController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -22,5 +23,18 @@ export class CouponController {
     const coupon = await useCase.execute({ ...data, restaurantId });
 
     return reply.status(201).send(coupon);
+  }
+
+  async list(request: FastifyRequest, reply: FastifyReply) {
+    const listCouponsParamsSchema = z.object({
+      restaurantId: z.string().uuid(),
+    });
+
+    const { restaurantId } = listCouponsParamsSchema.parse(request.params);
+
+    const useCase = new ListCouponsUseCase();
+    const coupons = await useCase.execute({ restaurantId });
+
+    return reply.status(200).send(coupons);
   }
 }
