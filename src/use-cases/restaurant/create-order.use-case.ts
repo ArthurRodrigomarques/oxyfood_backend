@@ -188,15 +188,13 @@ export class CreateOrderUseCase {
         throw new Error("Cupom inválido ou não encontrado.");
       }
 
-      // --- VERIFICAÇÃO DE USO ÚNICO POR CLIENTE (NOVO) ---
-      // Verifica se existe algum pedido desse telefone, com esse cupom, que NÃO foi cancelado.
       const alreadyUsed = await prisma.order.findFirst({
         where: {
           restaurantId: restaurantId,
           customerPhone: customerPhone,
           couponId: coupon.id,
           status: {
-            not: "CANCELED", // Permite reutilizar se o pedido anterior falhou/foi cancelado
+            not: "CANCELED",
           },
         },
       });
@@ -204,7 +202,6 @@ export class CreateOrderUseCase {
       if (alreadyUsed) {
         throw new Error("Você já utilizou este cupom em um pedido anterior.");
       }
-      // ---------------------------------------------------
 
       if (coupon.expiresAt && new Date() > coupon.expiresAt) {
         throw new Error("Este cupom expirou.");
