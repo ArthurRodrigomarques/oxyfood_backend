@@ -16,4 +16,9 @@ export async function couponRoutes(app: FastifyInstance) {
     { onRequest: [authMiddleware] },
     couponController.list,
   );
+
+  app.post(
+    "/restaurants/:restaurantId/coupons/validate",
+    couponController.validate,
+  );
 }
