@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { CreateCouponUseCase } from "@/use-cases/restaurant/create-coupon.use-case.js";
 import { ListCouponsUseCase } from "@/use-cases/restaurant/list-coupons.use-case.js";
+import { ValidateCouponUseCase } from "@/use-cases/restaurant/validate-coupon.use-case.js";
 
 export class CouponController {
   async create(request: FastifyRequest, reply: FastifyReply) {
@@ -36,5 +37,32 @@ export class CouponController {
     const coupons = await useCase.execute({ restaurantId });
 
     return reply.status(200).send(coupons);
+  }
+
+  async validate(request: FastifyRequest, reply: FastifyReply) {
+    const validateParamsSchema = z.object({
+      restaurantId: z.string().uuid(),
+    });
+
+    const validateBodySchema = z.object({
+      code: z.string().min(1),
+      subTotal: z.number().positive(),
+      customerPhone: z.string().optional(),
+    });
+
+    const { restaurantId } = validateParamsSchema.parse(request.params);
+    const { code, subTotal, customerPhone } = validateBodySchema.parse(
+      request.body,
+    );
+
+    const useCase = new ValidateCouponUseCase();
+    const result = await useCase.execute({
+      restaurantId,
+      code,
+      subTotal,
+      customerPhone,
+    });
+
+    return reply.status(200).send(result);
   }
 }
