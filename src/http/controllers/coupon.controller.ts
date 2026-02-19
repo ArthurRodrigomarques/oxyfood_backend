@@ -50,19 +50,23 @@ export class CouponController {
       customerPhone: z.string().optional(),
     });
 
-    const { restaurantId } = validateParamsSchema.parse(request.params);
-    const { code, subTotal, customerPhone } = validateBodySchema.parse(
-      request.body,
-    );
+    try {
+      const { restaurantId } = validateParamsSchema.parse(request.params);
+      const { code, subTotal, customerPhone } = validateBodySchema.parse(
+        request.body,
+      );
 
-    const useCase = new ValidateCouponUseCase();
-    const result = await useCase.execute({
-      restaurantId,
-      code,
-      subTotal,
-      customerPhone,
-    });
+      const useCase = new ValidateCouponUseCase();
+      const result = await useCase.execute({
+        restaurantId,
+        code,
+        subTotal,
+        customerPhone,
+      });
 
-    return reply.status(200).send(result);
+      return reply.status(200).send(result);
+    } catch (error: any) {
+      return reply.status(400).send({ message: error.message });
+    }
   }
 }
