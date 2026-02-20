@@ -68,3 +68,7 @@ export const toggleRestaurantStatusBodySchema = z.object({
     error: "O status 'isOpen' (true/false) é obrigatório.",
   }),
 });
+
+export const createTableSchema = z.object({
+  number: z.string().min(1, "O número/identificação da mesa é obrigatório"),
+});
