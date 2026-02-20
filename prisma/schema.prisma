@@ -63,6 +63,7 @@ model Restaurant {
   orders                 Order[]
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   reviews                Review[]
+  tables Table[]
 
   @@map("restaurants")
 }
@@ -141,6 +142,8 @@ model Order {
   deliveryFee       Decimal       @map("delivery_fee") @db.Decimal(10, 2)
   totalPrice        Decimal       @map("total_price") @db.Decimal(10, 2)
   status            OrderStatus   @default(PENDING)
+  tableId String?
+  table   Table?  @relation(fields: [tableId], references: [id], onDelete: SetNull)
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
   restaurantId      String        @map("restaurant_id")
@@ -214,6 +217,27 @@ model PasswordResetToken {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("password_reset_tokens")
+}
+
+model Table {
+  id           String      @id @default(uuid())
+  number       String   
+  isActive     Boolean     @default(true)
+  status       TableStatus @default(AVAILABLE)
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]     
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([restaurantId, number]) 
+  @@map("tables")
+}
+
+enum TableStatus {
+  AVAILABLE     // Livre
+  OCCUPIED      // Ocupada
+  NEEDS_SERVICE // Chamou o garçom / Aguardando atendimento
 }
 
 enum OptionGroupType {

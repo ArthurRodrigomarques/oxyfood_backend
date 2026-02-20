@@ -23,6 +23,7 @@ import { reviewRoutes } from "./http/routes/review.routes.js";
 import { subscriptionRoutes } from "./http/routes/subscription.route.js";
 import { planRoutes } from "./http/routes/plans.routes.js";
 import { couponRoutes } from "./http/routes/coupon.routes.js";
+import { tableRoutes } from "./http/routes/table.routes.js";
 // import { whatsappRoutes } from "./http/routes/whatsapp.routes.js";
 
 declare module "fastify" {
@@ -118,6 +119,7 @@ app.register(debugRoutes);
 app.register(subscriptionRoutes);
 app.register(planRoutes);
 app.register(couponRoutes);
+app.register(tableRoutes);
 // app.register(whatsappRoutes);
 
 app.setErrorHandler((error: FastifyError, request, reply) => {
